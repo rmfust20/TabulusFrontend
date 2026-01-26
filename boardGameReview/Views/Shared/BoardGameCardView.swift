@@ -9,31 +9,19 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct BoardGameCardView: View {
-    @EnvironmentObject private var router: HomeRouter
+    //@EnvironmentObject private var router: HomeRouter
     let boardGame: BoardGameModel
     @Binding var showStars : Bool
-    @State var cardImage: UIImage? = nil
-    @ObservedObject var boardGameViewModel = BoardGameViewModel()
+    let cardImage: UIImage?
     var body: some View {
         HStack {
-            Button {router.push(.boardGame(id: boardGame.id))} label: {
                 Image(uiImage: cardImage ?? UIImage())
                     .resizable()
                     .frame(width:100, height:140)
                     .scaledToFit()
-            }
-            .onAppear {
-                Task {
-                    boardGameViewModel.boardGame = boardGame
-                    await boardGameViewModel.presentImage()
-                    cardImage = boardGameViewModel.boardGameImage
-                }
-            }
             VStack(alignment: .leading, spacing: 14) {
-                Button {router.push(.boardGame(id:boardGame.id))} label: {
                     Text(boardGame.name)
                         .font(.system(size:15))
-                }
                 .buttonStyle(.plain)
                 Text("by Robert Fusting, Emit Strong")
                     .font(.system(size:13))
@@ -66,5 +54,5 @@ struct BoardGameCardView: View {
         description: "Trade, build, and settle the island of Catan.",
         min_age: 10,
         image: "https://example.com/catan-image.jpg"
-    ),showStars: .constant(false))
+    ),showStars: .constant(false), cardImage: nil)
 }

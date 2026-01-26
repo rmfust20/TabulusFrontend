@@ -1,35 +1,33 @@
 //
-//  ReviewService.swift
+//  UserService.swift
 //  boardGameReview
 //
-//  Created by Robert Fusting on 1/5/26.
+//  Created by Robert Fusting on 1/18/26.
 //
 
 import Foundation
 
-struct ReviewService {
+struct UserService {
     let client: APIClient
     let baseURL: String
-
+    
     init(client: APIClient = APIClient.shared) {
         self.client = client
         self.baseURL = "http://127.0.0.1:8000"
     }
     
-    func postReview(review: ReviewModel, accessToken: String) async throws {
+    func registerUser(user: UserModel) async throws -> RegisterResponse {
         var components = URLComponents(string: baseURL)
-        components?.path = "/reviews/postReview"
+        components?.path = "/users/register"
         guard let url = components?.url else { throw APIError.invalidURL }
         
         var request = URLRequest(url: url)
-        try client.authorizedRequest(&request, accessToken: accessToken)
         
-        print(url.absoluteString)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let encoder = JSONEncoder()
-        let data = try encoder.encode(review)
+        let data = try encoder.encode(user)
         request.httpBody = data
         
         let (responseData, response) = try await client.getSession().data(for: request)
@@ -37,25 +35,30 @@ struct ReviewService {
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
         
-        print(responseData)
-        
+        return try JSONDecoder().decode(RegisterResponse.self, from: responseData)
     }
     
-    func getReviews(boardGameID: Int) async throws -> [ReviewModel] {
+    func login(username: String, password: String) async throws -> AuthResponse {
         var components = URLComponents(string: baseURL)
-        components?.path = "/reviews/boardGame/\(boardGameID)"
+        components?.path = "/users/login"
         guard let url = components?.url else { throw APIError.invalidURL }
         
-        let (data, response) = try await client.getSession().data(from: url)
+        var request = URLRequest(url: url)
         
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-
+        let encoder = JSONEncoder()
+        let loginData = ["username": username, "password": password]
+        let data = try encoder.encode(loginData)
+        request.httpBody = data
+        
+        let (responseData, response) = try await client.getSession().data(for: request)
+        
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
         
-        let reviews = try JSONDecoder().decode([ReviewModel].self, from: data)
-        
-        return reviews
-
+        return try JSONDecoder().decode(AuthResponse.self, from: responseData)
     }
+    
 }

@@ -18,8 +18,8 @@ class ReviewViewModel : ObservableObject {
         self.reviewService = reviewService
     }
     
-    func postReview(_ review: ReviewModel) async {
-        try? await reviewService.postReview(review: review)
+    func postReview(_ review: ReviewModel, accessToken: String) async throws {
+        try await reviewService.postReview(review: review, accessToken: accessToken)
     }
     
     @MainActor

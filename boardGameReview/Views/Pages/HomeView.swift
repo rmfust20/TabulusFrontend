@@ -9,21 +9,25 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var router: HomeRouter
-    @ObservedObject var boardGameViewModel = BoardGameViewModel()
+    @StateObject var homeFeedViewModel = HomeFeedViewModel()
     @ObservedObject var reviewViewModel = ReviewViewModel()
-    @State var boardGames: [BoardGameModel] = []
     @State private var showStars: Bool = false
     let userID = 1
     var body: some View {
         ZStack {
             ScrollView {
                 LazyVStack {
-                    ForEach(boardGames) { boardGame in
-                        BoardGameCardView(boardGame: boardGame, showStars: $showStars)
-                        
+                    ForEach(homeFeedViewModel.boardGames) { boardGame in
+                        Button {router.push(.boardGame(id: boardGame.id))} label: {
+                            BoardGameCardView(boardGame: boardGame, showStars: $showStars, cardImage: ImageCache.shared.getImage(for: boardGame.id))
+                        }
+                        .buttonStyle(.plain)
                             .onAppear() {
-                                if boardGame.id == boardGames.last?.id {
-                                    Task { boardGames = await boardGameViewModel.fetchBoardGamesFromNetwork(userID)
+                                Task {
+                                    await homeFeedViewModel.updateImageCache(boardGame: boardGame)
+                                }
+                                if boardGame.id == homeFeedViewModel.boardGames.last?.id {
+                                    Task { await homeFeedViewModel.fetchBoardGamesFromNetwork(userID)
                                     }
                                 }
                             }
@@ -32,7 +36,7 @@ struct HomeView: View {
             }
             .onAppear() {
                 Task {
-                    boardGames = await boardGameViewModel.fetchBoardGames(1)
+                    await homeFeedViewModel.fetchBoardGames(1)
                 }
             }
             AddStars(isPresented: $showStars)

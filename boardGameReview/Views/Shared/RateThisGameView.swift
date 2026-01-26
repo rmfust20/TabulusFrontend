@@ -20,12 +20,7 @@ struct RateThisGameView: View {
                     Text("Rate this game:")
                         .foregroundStyle(Color.gray)
                         .font(.system(size:13))
-                    ForEach(0..<5) { _ in
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(Color.gray)
-                            .opacity(0.25)
-                            .font(.system(size:13))
-                    }
+                    FlexStarsView(rating:.constant(0), size: 13, interactive: false)
                 }
             }
         }

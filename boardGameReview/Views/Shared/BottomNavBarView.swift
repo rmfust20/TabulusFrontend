@@ -8,7 +8,7 @@
 import SwiftUI
 
 enum Tab: Hashable {
-    case home, profile
+    case home, profile, login
 }
 
 struct BottomNavBarView: View {
@@ -25,6 +25,13 @@ struct BottomNavBarView: View {
                     }
                     .tabItem { Label("Profile", systemImage: "person") }
                     .tag(Tab.profile)
+            NavigationStack {
+                RegisterView(userID: 0)
+            }
+                    .tabItem {
+                        Label("Login", systemImage: "square.and.arrow.up")
+                    }
+                    .tag(Tab.login)
         }
     }
 }

@@ -21,6 +21,13 @@ final class APIClient {
         self.session = URLSession(configuration: config)
         }
     
+    func authorizedRequest(_ request: inout URLRequest, accessToken: String?) throws {
+            guard let token = accessToken, !token.isEmpty else {
+                throw APIError.missingAccessToken
+            }
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+    
     func getSession() -> URLSession {
         return session
     }

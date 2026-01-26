@@ -11,6 +11,7 @@ enum HomeRoute: Hashable {
     case userProfile(id: Int)
     case boardGame(id: Int)
     case addReview(id: Int, rating : Int?)
+    case login(id: Int)
 }
 
 struct HomeNavRootView: View {
@@ -39,6 +40,8 @@ struct HomeNavRootView: View {
             BoardGameView(boardGameID: id)
         case .addReview(let id, let rating):
             AddReviewView(boardGameID: id, rating: rating ?? 0)
+        case .login(let id):
+            RegisterView(userID: id)
         }
     }
 }

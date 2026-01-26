@@ -10,6 +10,8 @@ enum APIError: Error, LocalizedError {
     case invalidResponse
     case invalidImageData
     case httpStatus(Int)
+    case missingAccessToken
+
 
     var errorDescription: String? {
         switch self {
@@ -31,6 +33,8 @@ enum APIError: Error, LocalizedError {
             return "The image data is invalid."
         case .httpStatus(let statusCode):
             return "HTTP Error with status code: \(statusCode)."
+        case .missingAccessToken:
+            return "Access token is missing."
         }
     }
 }

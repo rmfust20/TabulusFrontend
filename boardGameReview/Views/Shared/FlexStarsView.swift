@@ -1,27 +1,16 @@
+//
+//  FlexStarsView.swift
+//  boardGameReview
+//
+//  Created by Robert Fusting on 1/15/26.
+//
+
 import SwiftUI
 
-struct RateThisGameFullView: View {
-    @EnvironmentObject private var router: HomeRouter
-    @State private var rating: Int = 0   // 0 means “no rating yet”
-    let id : Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Rate This Game:")
-                .foregroundStyle(.gray)
-            FlexStarsView(rating:$rating, size: 24, interactive: true)
-        }
-        .padding()
-        
-        if rating > 0 {
-            ReviewButton(id: id, rating: rating)
-        }
-    }
-    
-}
-
-struct Stars : View {
+struct FlexStarsView: View {
     @Binding var rating: Int
+    let size : CGFloat
+    var interactive: Bool
     var body: some View {
         HStack(spacing: 8) {
             ForEach(0..<5) { index in
@@ -31,17 +20,17 @@ struct Stars : View {
                     //TODO network call to update users ratings
                 } label: {
                     Image(systemName: index < rating ? "star.fill" : "star")
-                        .font(.title)
+                        .font(.system(size:size))
                         .foregroundStyle(index < rating ? .yellow : .gray)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Rate \(index + 1) star\(index == 0 ? "" : "s")")
             }
         }
+        .allowsHitTesting(interactive)
     }
 }
 
 #Preview {
-    RateThisGameFullView(id: 1)
+    FlexStarsView(rating: .constant(3), size: 20, interactive: true)
 }
-

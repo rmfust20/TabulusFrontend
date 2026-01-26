@@ -9,14 +9,15 @@ import SwiftUI
 
 struct AddReviewView: View {
     let boardGameID: Int
+    @EnvironmentObject private var auth : Auth
     @State var rating: Int
     @State private var text: String = ""
-    @ObservedObject private var viewModel = ReviewViewModel()
+    @StateObject private var viewModel = ReviewViewModel()
     var body: some View {
         HStack {
             Text("Your Rating:")
                 .font(.title)
-            Stars(rating: $rating)
+            FlexStarsView(rating: $rating, size: 30, interactive: true)
         }
         .padding(.top,10)
         Rectangle()
@@ -40,11 +41,16 @@ struct AddReviewView: View {
                         let reviewModel = ReviewModel(
                             id: nil,
                             board_game_id: boardGameID,
-                            user_id: 1,
+                            user_id: auth.userID ?? 0,
                             rating: rating,
                             comment: text
                         )
-                        await viewModel.postReview(reviewModel)
+                        
+                        do {
+                            try await viewModel.postReview(reviewModel,accessToken: auth.accessToken ?? "")
+                        } catch {
+                            print("Error posting review: \(error)")
+                        }
                     }
                 }
             }
