@@ -88,7 +88,6 @@ struct BoardGameService {
         var components = URLComponents(string: baseURL)
         components?.path = "/boardGames/designers/\(boardGameID)"
         
-        print(components?.url?.absoluteString ?? "no url")
         guard let url = components?.url else { throw APIError.invalidURL }
         
         let (data, response) = try await client.getSession().data(from: url)
@@ -98,11 +97,8 @@ struct BoardGameService {
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
         
-        print("here")
+
         let designers = try JSONDecoder().decode([BoardGameDesingnerModel].self, from: data)
-        print("hello")
-        
-        print(designers)
         return designers.map { $0.name }.sorted()
         
     }

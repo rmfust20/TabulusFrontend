@@ -15,6 +15,7 @@ struct HomeView: View {
     let userID = 1
     var body: some View {
         ZStack {
+            Color("Background").ignoresSafeArea()
             ScrollView {
                 LazyVStack {
                     ForEach(homeFeedViewModel.boardGames) { boardGame in
@@ -40,6 +41,7 @@ struct HomeView: View {
                 }
             }
             AddStars(isPresented: $showStars)
+            
         }
     }
 }

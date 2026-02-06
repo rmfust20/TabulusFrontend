@@ -8,7 +8,6 @@
 import Foundation
 
 class ReviewViewModel : ObservableObject {
-    @Published var reviews: [ReviewModel] = []
     let reviewService: ReviewService
     var boardGameID: Int = 0 // Replace with actual board game ID as needed
     var userID: Int = 0 // Replace with actual user ID as needed
@@ -21,12 +20,4 @@ class ReviewViewModel : ObservableObject {
     func postReview(_ review: ReviewModel, accessToken: String) async throws {
         try await reviewService.postReview(review: review, accessToken: accessToken)
     }
-    
-    @MainActor
-    func getReviews() async {
-        if let fetchedReviews = try? await reviewService.getReviews(boardGameID: boardGameID) {
-            reviews = fetchedReviews
-        }
-    }
-
 }

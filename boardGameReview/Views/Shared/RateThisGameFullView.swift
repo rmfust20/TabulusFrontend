@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct RateThisGameFullView: View {
-    @EnvironmentObject private var router: HomeRouter
-    @State private var rating: Int = 0   // 0 means “no rating yet”
+    @EnvironmentObject private var router: HomeRouter// 0 means “no rating yet”
+    @StateObject private var reviewViewModel = ReviewViewModel()
+    @EnvironmentObject private var auth : Auth
     let id : Int
+    @Binding var rating: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -12,10 +14,31 @@ struct RateThisGameFullView: View {
             FlexStarsView(rating:$rating, size: 24, interactive: true)
         }
         .padding()
+        .onDisappear{
+            if rating > 0 {
+                Task {
+                    let reviewModel = ReviewModel(
+                        id: nil,
+                        board_game_id: id,
+                        user_id: auth.userID ?? 0,
+                        username: auth.username ?? "unknown",
+                        rating: rating,
+                        comment: nil
+                    )
+                    do {
+                        try await reviewViewModel.postReview(reviewModel, accessToken: auth.accessToken ?? "")
+                    }
+                    catch {
+                        print("Error posting review: \(error)")
+                    }
+                }
+            }
+        }
         
         if rating > 0 {
             ReviewButton(id: id, rating: rating)
         }
+           
     }
     
 }
@@ -42,6 +65,6 @@ struct Stars : View {
 }
 
 #Preview {
-    RateThisGameFullView(id: 1)
+    RateThisGameFullView(id: 1, rating: .constant(2))
 }
 

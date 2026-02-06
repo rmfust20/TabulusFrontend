@@ -14,31 +14,31 @@ struct BoardGameCardView: View {
     @Binding var showStars : Bool
     let cardImage: UIImage?
     var body: some View {
-        HStack {
+        ZStack {
+            HStack {
                 Image(uiImage: cardImage ?? UIImage())
                     .resizable()
                     .frame(width:100, height:140)
                     .scaledToFit()
-            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 14) {
                     Text(boardGame.name)
                         .font(.system(size:15))
-                .buttonStyle(.plain)
-                Text("by Robert Fusting, Emit Strong")
-                    .font(.system(size:13))
-                    .foregroundStyle(Color.gray)
-                WantToPlayButtonView()
-                RateThisGameView(isPresented: $showStars)
+                        .foregroundStyle(Color("TextColor"))
+                        .buttonStyle(.plain)
+                    WantToPlayButtonView()
+                    RateThisGameView(isPresented: $showStars)
+                }
             }
+            
+            .padding()
+            .padding(.bottom,30)
+            .background(
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(Color.gray, lineWidth: 1)
+                    .opacity(0.5)
+            )
         }
-        
-        .padding()
-        .padding(.bottom,30)
-        .background(
-            RoundedRectangle(cornerRadius: 2)
-                .stroke(Color.gray, lineWidth: 1)
-                .opacity(0.5)
-        )
-        .padding(.bottom,15)
+        .background(Color("CardSurface"))
     }
 }
 

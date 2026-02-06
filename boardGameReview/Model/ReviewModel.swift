@@ -11,6 +11,7 @@ struct ReviewModel: Identifiable, Codable {
     let id: Int?
     let board_game_id: Int
     let user_id: Int
+    let username: String
     var rating: Int
     var comment: String?
     var date_created: String?

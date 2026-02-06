@@ -24,7 +24,6 @@ struct ReviewService {
         var request = URLRequest(url: url)
         try client.authorizedRequest(&request, accessToken: accessToken)
         
-        print(url.absoluteString)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
@@ -36,8 +35,6 @@ struct ReviewService {
         
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
-        
-        print(responseData)
         
     }
     
@@ -57,5 +54,36 @@ struct ReviewService {
         
         return reviews
 
+    }
+    
+    func getReviewStats(boardGameID: Int) async throws -> ReviewStatsModel {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/reviews/reviewStats/\(boardGameID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+        
+        let (data, response) = try await client.getSession().data(from: url)
+        
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+        
+        let reviewStats = try JSONDecoder().decode(ReviewStatsModel.self, from: data)
+        
+        return reviewStats
+    }
+    
+    func getUserReview(boardGameID: Int, userID: Int) async throws -> ReviewModel? {
+        print("triggr")
+        var components = URLComponents(string: baseURL)
+        components?.path = "/reviews/userBoardGame/\(userID)/\(boardGameID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+        
+        let (data, response) = try await client.getSession().data(from: url)
+        
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+        print("")
+        let review = try JSONDecoder().decode(ReviewModel.self, from: data)
+        print(review.rating)
+        return review
     }
 }

@@ -16,7 +16,7 @@ struct ReviewCardView: View {
             VStack(alignment: .leading, spacing: 6) {
 
                 HStack(spacing: 8) {
-                    Text("Robert")
+                    Text(reviewModel.username)
                         .font(.headline)
 
                     Text("rated it")
@@ -24,10 +24,10 @@ struct ReviewCardView: View {
                         .foregroundStyle(.secondary)
 
 
-                    FlexStarsView(rating: .constant(3), size: 13, interactive: false)
+                    FlexStarsView(rating:.constant( reviewModel.rating), size: 13, interactive: false)
                 }
 
-                Text(text ?? "this is a sample review i just want to see how it would look with a lot of text and it does not look great")
+                Text(reviewModel.comment ?? "")
                     .font(.body)
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true) // allows wrapping
@@ -39,7 +39,7 @@ struct ReviewCardView: View {
 
 #Preview {
     ReviewCardView(
-        reviewModel: ReviewModel(id: 0, board_game_id: 0, user_id: 0, rating: 4, comment: "Great game!")
+        reviewModel: ReviewModel(id: 0, board_game_id: 0, user_id: 0, username: "rmfust50", rating: 4, comment: "Great game!")
     )
 }
 

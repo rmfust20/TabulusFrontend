@@ -10,79 +10,21 @@ import UIKit
 
 class BoardGameViewModel: ObservableObject {
     private let boardGameService: BoardGameService
-    @Published var boardGameID: Int = 0
-    @Published var boardGames: [BoardGameModel] = []
+    let boardGameID: Int
     @Published var boardGame : BoardGameModel? = nil
     @Published var LastSeenID: Int = 0
     @Published var boardGameImage : UIImage? = nil
+    @Published var reviews: [ReviewModel] = []
+    @Published var averageRating: Double? = nil
+    @Published var numberOfRatings: Int? = nil
+    @Published var numberOfReviews: Int? = nil
+    @Published var userRating : Int = 0
+    private let reviewService: ReviewService
     
-    init(boardGameService: BoardGameService = BoardGameService()) {
+    init(boardGameService: BoardGameService = BoardGameService(), reviewService: ReviewService = ReviewService(), boardGameID: Int) {
         self.boardGameService = boardGameService
-    }
-    
-    @MainActor
-    func fetchBoardGames(_ userID : Int) async -> [BoardGameModel] {
-        //var url = "http://127.0.0.1:8000/boardGames/user/\(userID)"
-        var boardGamesInCache: [BoardGameModel] = []
-        //here we first check our cache for existing board games before fetching more from the network
-        let feedKeys = BoardGameCache.shared.getFeedKeys()
-        
-        if feedKeys.count == 0 {
-            return await fetchBoardGamesFromNetwork(userID)
-        }
-        
-        let diff = feedKeys.filter { key in !boardGames.contains(where: { $0.id == key }) }
-        
-        if diff.count == 0 {
-            return boardGames
-        }
-        
-        
-        
-        for i in (0..<(feedKeys.count == 0 ? 25 : feedKeys.count)) {
-            let cacheKey = (feedKeys.count == 0 ? 0 : feedKeys[i])
-            // we now need to check what is in the cache vs what needs to be fetched from the network according to our feed keys
-            if let cachedBoardGame = BoardGameCache.shared.get(id: cacheKey) {
-                boardGamesInCache.append(cachedBoardGame)
-            }
-            
-        }
-        let boardGamesToFetch: [Int] = feedKeys.filter { key in !boardGamesInCache.contains(where: { $0.id == key }) }
-        
-        if boardGamesToFetch.count > 0 {
-            let rehydratedBoardGames = try? await boardGameService.rehydrate(userID: userID, boardGameIds: boardGamesToFetch)
-            if let rehydratedBoardGames = rehydratedBoardGames {
-                for boardGame in rehydratedBoardGames {
-                    BoardGameCache.shared.set(boardGame)
-                }
-                
-                let combinedSorted = (rehydratedBoardGames + boardGamesInCache).sorted { $0.id < $1.id }
-                let diff = combinedSorted.filter { key in !self.boardGames.contains(where: { $0.id == key.id })}
-                self.boardGames += diff
-                self.boardGames = self.boardGames.sorted { $0.id < $1.id }
-            }
-        }
-        
-        else {
-            let diff = boardGamesInCache.filter { key in !self.boardGames.contains(where: { $0.id == key.id })}
-            self.boardGames = (diff + self.boardGames).sorted { $0.id < $1.id }
-        }
-        return boardGames
-    }
-    
-    @MainActor
-    func fetchBoardGamesFromNetwork(_ userID: Int) async -> [BoardGameModel] {
-        var url = "http://127.0.0.1:8000/boardGames/user/\(userID)"
-        let fetchedBoardGames = try? await boardGameService.fetchBoardGameFeedForUser(String(userID), &url, LastSeenID)
-        if let fetchedBoardGames = fetchedBoardGames {
-            for boardGame in fetchedBoardGames {
-                BoardGameCache.shared.set(boardGame)
-                BoardGameCache.shared.addFeedKey(boardGame.id)
-            }
-            self.boardGames.append(contentsOf: fetchedBoardGames)
-            LastSeenID += 25
-        }
-       return boardGames
+        self.reviewService = reviewService
+        self.boardGameID = boardGameID
     }
     
     func fetchBoardGame(_ boardGameID : Int) async -> BoardGameModel? {
@@ -128,9 +70,31 @@ class BoardGameViewModel: ObservableObject {
     }
     
     @MainActor
-    func getBoardGameDesigners(_ id: Int) async -> [String] {
-        let designers = try? await boardGameService.fetchBoardGameDesigners(id)
-        print(designers ?? [])
+    func getBoardGameDesigners() async -> [String] {
+        let designers = try? await boardGameService.fetchBoardGameDesigners(boardGameID)
         return designers ?? []
+    }
+    
+    @MainActor
+    func getReviews() async {
+        if let fetchedReviews = try? await reviewService.getReviews(boardGameID: boardGameID) {
+            reviews = fetchedReviews
+        }
+    }
+    
+    @MainActor
+    func getReviewStats(boardGameID : Int) async {
+        if let stats = try? await reviewService.getReviewStats(boardGameID: boardGameID) {
+            averageRating = stats.average_rating
+            numberOfRatings = stats.number_of_ratings
+            numberOfReviews = stats.number_of_reviews
+        }
+    }
+    
+    @MainActor
+    func getUserReview(userID: Int) async {
+        if let review = try? await reviewService.getUserReview(boardGameID: boardGameID, userID: userID) {
+            userRating = review.rating
+        }
     }
 }

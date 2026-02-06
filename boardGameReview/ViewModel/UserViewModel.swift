@@ -33,4 +33,6 @@ class UserViewModel: ObservableObject {
     func populateAuth(auth: AuthResponse, authStore: Auth) {
         authStore.setSession(auth)
     }
+    
+    
 }

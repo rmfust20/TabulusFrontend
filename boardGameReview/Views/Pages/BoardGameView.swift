@@ -9,15 +9,21 @@ import SwiftUI
 import SDWebImageSwiftUI
 struct BoardGameView: View {
     let boardGameID: Int
+    @EnvironmentObject var auth: Auth
     @State var cardImage: UIImage? = nil
     @State var boardGame: BoardGameModel? = nil
     @State var designers: [String] = []
-    @ObservedObject var boardGameViewModel = BoardGameViewModel()
-    @ObservedObject var reviewViewModel = ReviewViewModel()
+    @StateObject private var boardGameViewModel: BoardGameViewModel
+
+    init(boardGameID: Int) {
+           self.boardGameID = boardGameID
+           _boardGameViewModel = StateObject(wrappedValue: BoardGameViewModel(boardGameID: boardGameID))
+       }
+    
     var body: some View {
         ScrollView {
             ZStack {
-                Color("BoardGameViewBackDrop")
+                Color("BoardGameView")
                 Image(uiImage: cardImage ?? UIImage())
                         .resizable()
                         .scaledToFit()
@@ -27,12 +33,14 @@ struct BoardGameView: View {
             }
             .onAppear() {
                 Task {
-                    boardGameViewModel.boardGameID = boardGameID
                     await boardGameViewModel.presentBoardGame()
                     await boardGameViewModel.presentImage()
+                    await boardGameViewModel.getReviews()
+                    await
+                    boardGameViewModel.getUserReview(userID: auth.userID ?? 0)
                     boardGame = boardGameViewModel.boardGame
                     cardImage = boardGameViewModel.boardGameImage
-                    reviewViewModel.boardGameID = boardGameID
+                    
                 }
             }
             .frame(height: 430)
@@ -41,11 +49,16 @@ struct BoardGameView: View {
             Text(designers.joined(separator: ", "))
                 .onAppear {
                     Task {
-                        designers = await boardGameViewModel.getBoardGameDesigners(boardGameID)
+                        designers = await boardGameViewModel.getBoardGameDesigners()
                     }
                 }
             HStack {
-                ComputedRatingView()
+                ComputedRatingView(averageRating: boardGameViewModel.averageRating, numberOfRatings: boardGameViewModel.numberOfRatings, numberOfReviews: boardGameViewModel.numberOfReviews)
+            }
+            .onAppear {
+                Task {
+                    await boardGameViewModel.getReviewStats(boardGameID: boardGameID)
+                }
             }
             .padding(.top,10)
             Rectangle()
@@ -54,7 +67,7 @@ struct BoardGameView: View {
                 .frame(height: 2)
             WantToPlayButtonView()
                 .padding(.bottom,10)
-            RateThisGameFullView(id: boardGameID)
+            RateThisGameFullView(id: boardGameID, rating:  $boardGameViewModel.userRating)
             //ReviewButton()
                 //.padding(.bottom,10)
             Rectangle()
@@ -89,36 +102,20 @@ struct BoardGameView: View {
                 .opacity(0.50)
                 .frame(height: 1)
                 .padding(.top,10)
-                
-        }
-        .onAppear {
-            Task {
-                boardGame = BoardGameCache.shared.get(id: boardGameID)
-                
-                if boardGame == nil {
-                    boardGame = await BoardGameViewModel().fetchBoardGame( boardGameID)
-                    
-                    if let boardGame = boardGame {
-                        BoardGameCache.shared.set(boardGame)
-                    }
+            
+            LazyVStack {
+                ForEach(boardGameViewModel.reviews) { review in
+                    ReviewCardView(reviewModel: review)
                 }
+                
             }
+                
         }
-        .edgesIgnoringSafeArea(.all)
+        .edgesIgnoringSafeArea(.top)
     }
 }
 
 #Preview {
-    BoardGameView(boardGameID:181, boardGame: BoardGameModel(
-        id: 1,
-        name: "Die Macher",
-        thumbnail: "https://cf.geekdo-images.com/rpwCZAjYLD940NWwP3SRoA__small/img/YT6svCVsWqLrDitcMEtyazVktbQ=/fit-in/200x150/filters:strip_icc()/pic4718279.jpg",
-        play_time: 60,
-        min_players: 3,
-        max_players: 4,
-        year_published: 1995,
-        description: "Trade, build, and settle the island of Catan.",
-        min_age: 10,
-        image: "https://example.com/catan-image.jpg"
-    ))
+    BoardGameView(boardGameID:181)
+        .environmentObject(Auth())
 }

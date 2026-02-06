@@ -18,8 +18,8 @@ struct RateThisGameView: View {
             } label: {
                 HStack {
                     Text("Rate this game:")
-                        .foregroundStyle(Color.gray)
                         .font(.system(size:13))
+                        .foregroundStyle(Color("MutedText"))
                     FlexStarsView(rating:.constant(0), size: 13, interactive: false)
                 }
             }
