@@ -9,9 +9,15 @@ import Foundation
 class GameNightViewModel: ObservableObject {
     
     private let boardGameService: BoardGameService
+    private let gameNightService: GameNightService
+    @Published var selectedGames: [BoardGameModel] = []
+    @Published var userFriends: [UserPublicModel] = []
+    @Published var filteredFriends: [UserPublicModel] = []
+    @Published var selectedFriends: [UserPublicModel] = []
     
-    init(boardGameService: BoardGameService = BoardGameService()) {
+    init(boardGameService: BoardGameService = BoardGameService(), gameNightService: GameNightService = GameNightService()) {
         self.boardGameService = boardGameService
+        self.gameNightService = gameNightService
     }
     
     @MainActor
@@ -35,5 +41,28 @@ class GameNightViewModel: ObservableObject {
                 ImageCache.shared.storeImage(networkImage, for: boardGame.id)
             }
         }
+    }
+    
+    @MainActor
+    func getUserFriends(userID: Int) async {
+        let friends = try? await gameNightService.getUserFriends(userID: userID)
+        if let friends = friends {
+            self.userFriends = friends
+            self.filteredFriends = friends
+        }
+    }
+    
+    @MainActor
+    func filterFriends(searchText: String) {
+        filteredFriends = userFriends.filter { friend in
+            friend.username.lowercased().starts(with: searchText.lowercased())
+            
+        }
+        filteredFriends.sort { $0.username.lowercased() < $1.username.lowercased() }
+    }
+    
+    func addFriend(friend: UserPublicModel) {
+        selectedFriends.append(friend)
+        print(selectedFriends)
     }
 }

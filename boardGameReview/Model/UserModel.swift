@@ -13,3 +13,8 @@ struct UserModel: Identifiable, Codable {
     let email: String
     var password: String
 }
+
+struct UserPublicModel: Identifiable, Codable {
+    let id: Int
+    let username: String
+}
