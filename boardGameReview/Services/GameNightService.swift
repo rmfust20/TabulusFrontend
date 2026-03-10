@@ -13,8 +13,7 @@ struct GameNightService {
 
     init(client: APIClient = APIClient.shared) {
         self.client = client
-        //self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
-        self.baseURL = "http://127.0.0.1:8000"
+        self.baseURL = "http://localhost:8000"
     }
     
     func getUserFriends(userID: Int) async throws -> [UserPublicModel] {
@@ -25,7 +24,8 @@ struct GameNightService {
         var request = URLRequest(url: url)
         //try client.authorizedRequest(&request, accessToken: accessToken)
         
-        let (data, response) = try await client.getSession().data(from: url)
+        // ✅ Use the request, not the raw url
+        let (data, response) = try await client.getSession().data(for: request)
         
         
 
@@ -35,5 +35,46 @@ struct GameNightService {
         let friends = try JSONDecoder().decode([UserPublicModel].self, from: data)
     
         return friends
+    }
+    
+    func postGameNight(gameNight: GameNightUploadModel, accessToken: String) async throws {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/gameNights/postNight"
+        guard let url = components?.url else { throw APIError.invalidURL }
+        
+        var request = URLRequest(url: url)
+        try client.authorizedRequest(&request, accessToken: accessToken)
+        
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(gameNight)
+        request.httpBody = data
+        
+        let (responseData, response) = try await client.getSession().data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+    }
+    
+    func getGameNightFeed(userID : Int) async throws -> [GameNightModel]{
+        var components = URLComponents(string: baseURL)
+        components?.path = "/gameNights/userFeed/\(userID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+        
+        var request = URLRequest(url: url)
+        //try client.authorizedRequest(&request, accessToken: accessToken)
+        
+        // ✅ Use the request, not the raw url
+        let (data, response) = try await client.getSession().data(for: request)
+        
+        
+        print("make it here")
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+        
+        let gameNights = try JSONDecoder().decode([GameNightModel].self, from: data)
+        print("are we getting data here?")
+        return gameNights
     }
 }

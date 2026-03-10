@@ -54,7 +54,7 @@ struct ProfileView: View {
                     ForEach(0..<4) { index in
                         Rectangle()
                             .fill(Color.gray.opacity(0.4))
-                            .frame(width: .infinity, height: 150)
+                            .frame(width: 150, height: 150)
                     }
                 }
                 .padding()

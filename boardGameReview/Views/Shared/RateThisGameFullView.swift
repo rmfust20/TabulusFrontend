@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RateThisGameFullView: View {
-    @EnvironmentObject private var router: HomeRouter// 0 means “no rating yet”
+    @EnvironmentObject private var router: AppRouter// 0 means “no rating yet”
     @StateObject private var reviewViewModel = ReviewViewModel()
     @EnvironmentObject private var auth : Auth
     let id : Int

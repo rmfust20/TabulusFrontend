@@ -16,7 +16,7 @@ struct ImageService {
     
     init(client: APIClient = APIClient.shared) {
         self.client = client
-        self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
+        self.baseURL = "http://localhost:8000"
     }
     
     func uploadSelectedImages(selectedImages : [PhotosPickerItem]) async throws -> [UploadImagesResponse.UploadedFile] {
@@ -60,7 +60,7 @@ struct ImageService {
     
     private func uploadImages(files: [(data: Data, mimeType: String, filename: String)]) async throws -> UploadImagesResponse {
         var components = URLComponents(string: baseURL)
-        components?.path = "/images/upload/"
+        components?.path = "/images/upload"
         guard let url = components?.url else { throw APIError.invalidURL }
         
         var request = URLRequest(url: url)
@@ -128,5 +128,29 @@ struct ImageService {
         }
         return nil
     }
+    
+    func getImageURL(blobName: String) async throws -> String {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/images/url"
+        components?.queryItems = [URLQueryItem(name: "blob_name", value: blobName)]
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let decoded = try JSONDecoder().decode([String: String].self, from: data)
+        guard let urlString = decoded["url"] else { throw APIError.invalidURL }
+        return urlString
+    }
+
+    func getImageURLs(blobNames: [String]) async throws -> [String] {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/images/urls"
+        components?.queryItems = blobNames.map { URLQueryItem(name: "blob_names", value: $0) }
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let decoded = try JSONDecoder().decode([String: [String]].self, from: data)
+        return decoded["urls"] ?? []
+    }
+
 }
 

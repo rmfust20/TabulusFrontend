@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @EnvironmentObject private var router: HomeRouter
+    @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var auth: Auth
     @StateObject var homeFeedViewModel = HomeFeedViewModel()
     @ObservedObject var reviewViewModel = ReviewViewModel()
@@ -105,5 +105,5 @@ struct AddStars: View {
 
 
 #Preview {
-  HomeView().environmentObject(HomeRouter())
+  HomeView()
 }

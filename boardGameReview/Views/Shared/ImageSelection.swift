@@ -9,7 +9,7 @@ import SwiftUI
 import PhotosUI
 
 struct ImageSelection: View {
-    @StateObject private var imageViewModel = ImageUploadViewModel()
+    @ObservedObject var imageViewModel : ImageUploadViewModel
     
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
     var body: some View {
@@ -44,27 +44,25 @@ struct ImageTile: View {
     let onRemove: () -> Void
     let tileImage: UIImage
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        VStack(alignment: .trailing) {
             Image(uiImage: tileImage)
                 .resizable()
-                .scaledToFit()
-                .frame(height: 150)
+                .scaledToFill()
+                .aspectRatio(1, contentMode: .fit)  // square tiles
+                .frame(width: 170, height: 150)
                 .clipped()
-                .padding()
-                .padding(10) // space so background shows around image
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial) // or .fill(Color(.secondarySystemBackground))
-                )
-            Button {
-                onRemove()
-            } label: {
-                Image(systemName: "x.circle.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 30, height: 30)
-                    .opacity(0.5)
-            }.buttonStyle(.plain)
+                .cornerRadius(12)
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        onRemove()
+                    } label: {
+                        Image(systemName: "x.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 30, height: 30)
+                            .foregroundStyle(Color.white)
+                    }.buttonStyle(.plain)
+                }
         }
     }
 }
@@ -74,10 +72,11 @@ struct AddImageView: View {
         ZStack(alignment: .bottomTrailing) {
             Image(systemName: "photo")
                 .resizable()
-                .scaledToFit()
-                .frame(height: 150)
+                .scaledToFill()
+                .aspectRatio(1, contentMode: .fit)
+                .frame(width: 170, height: 150)
                 .clipped()
-                .cornerRadius(8)
+                .cornerRadius(12)
                 .opacity(0.1)
             Button {
                 //add image
@@ -86,6 +85,7 @@ struct AddImageView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 30, height: 30)
+                    //.padding(.trailing, 4)
                     .opacity(0.5)
             }
             .buttonStyle(.plain)
@@ -96,5 +96,5 @@ struct AddImageView: View {
 }
 
 #Preview {
-    ImageSelection()
+    ImageSelection(imageViewModel: ImageUploadViewModel())
 }

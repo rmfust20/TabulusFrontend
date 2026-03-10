@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ReviewButton: View {
-    @EnvironmentObject private var router: HomeRouter
+    @EnvironmentObject private var router: AppRouter
     let id: Int
     let rating: Int?
     var body: some View {

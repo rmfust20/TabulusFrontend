@@ -14,7 +14,7 @@ struct UserService {
     init(client: APIClient = APIClient.shared) {
         self.client = client
         //self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
-        self.baseURL = "http://127.0.0.1:8000"
+        self.baseURL = "http://localhost:8000"
     }
     
     func registerUser(user: UserModel) async throws -> RegisterResponse {

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CustomNavBar: ViewModifier {
-    @EnvironmentObject private var router: HomeRouter
+    @EnvironmentObject private var router: AppRouter
     let trailingTitle: Bool
     func body(content: Content) -> some View {
         content

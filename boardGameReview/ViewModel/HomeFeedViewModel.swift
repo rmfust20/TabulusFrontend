@@ -36,6 +36,7 @@ class HomeFeedViewModel : ObservableObject {
         // if no feed keys just go to network and we are done
         if feedKeys.count == 0 {
             boardGames = await fetchBoardGamesFromNetwork(userID: userID, accessToken: accessToken)
+            print(boardGames)
             return
         }
         
@@ -46,6 +47,7 @@ class HomeFeedViewModel : ObservableObject {
             
             self.boardGames.append(contentsOf: boardGamesInCache)
         }
+        print(boardGames)
     }
         
         @MainActor

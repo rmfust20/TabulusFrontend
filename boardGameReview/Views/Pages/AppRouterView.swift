@@ -7,23 +7,23 @@
 
 import SwiftUI
 
-enum HomeRoute: Hashable {
-    case userProfile(id: Int)
+enum AppRoute: Hashable {
     case boardGame(id: Int)
     case addReview(id: Int, rating : Int?)
-    case login(id: Int)
+    case addGameNight(id: Int)
 }
 
-struct HomeNavRootView: View {
+struct AppNavRouter<Root: View>: View {
     @Binding var selectedTab: Tab
-    @StateObject private var router = HomeRouter()
+    @StateObject private var router = AppRouter()
+    let root: () -> Root
 
     var body: some View {
         NavigationStack(path: $router.path) {
-            HomeView()
+            root()
                 .environmentObject(router)
                 // This ensures the back button doesn't carry the "Home" text forward
-                .navigationDestination(for: HomeRoute.self) { route in
+                .navigationDestination(for: AppRoute.self) { route in
                     viewForRoute(route)
                         .customNavBar(trailingTitle: trailingTitle(for: route))
                         // This removes the "Back" text and keeps only the arrow
@@ -32,25 +32,26 @@ struct HomeNavRootView: View {
         .environmentObject(router)
     }
     @ViewBuilder
-    private func viewForRoute(_ route: HomeRoute) -> some View {
+    private func viewForRoute(_ route: AppRoute) -> some View {
         switch route {
-        case .userProfile(let id):
-            ProfileView(userID: id)
         case .boardGame(let id):
             BoardGameView(boardGameID: id)
+        case .addGameNight(let id):
+            AddGameNightView(userID: id)
         case .addReview(let id, let rating):
             AddReviewView(boardGameID: id, rating: rating ?? 0)
-        case .login(let id):
-            RegisterView(userID: id)
         }
     }
 }
 
-private func trailingTitle(for route: HomeRoute) -> Bool {
+private func trailingTitle(for route: AppRoute) -> Bool {
     switch route {
     case .addReview:
+        return true
+    case .addGameNight:
         return true
     default:
         return false
     }
 }
+

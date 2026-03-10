@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AddReviewView: View {
     let boardGameID: Int
-    @EnvironmentObject private var router: HomeRouter
+    @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var auth : Auth
     @State var rating: Int
     @State private var text: String = ""

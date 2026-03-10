@@ -8,26 +8,25 @@ struct BoardGameService {
     init(client: APIClient = APIClient.shared) {
         self.client = client
         //self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
-        self.baseURL = "http://127.0.0.1:8000"
+        self.baseURL = "http://localhost:8000"
     }
     
     func fetchGeneralTrendingFeed(accessToken: String) async throws -> [BoardGameModel] {
         var components = URLComponents(string: baseURL)
-        components?.path = "/boardGames/trendingFeed/"
+        components?.path = "/boardGames/trendingFeed"
         guard let url = components?.url else { throw APIError.invalidURL }
         
         var request = URLRequest(url: url)
-        try client.authorizedRequest(&request, accessToken: accessToken)
+        //try client.authorizedRequest(&request, accessToken: accessToken)
         
-        let (data, response) = try await client.getSession().data(from: url)
+        // ✅ Use the request, not the raw url
+        let (data, response) = try await client.getSession().data(for: request)
         
         
-
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
         
         let boardGames = try JSONDecoder().decode([BoardGameModel].self, from: data)
-        
         return boardGames
     }
     
@@ -39,7 +38,8 @@ struct BoardGameService {
         var request = URLRequest(url: url)
         try client.authorizedRequest(&request, accessToken: accessToken)
         
-        let (data, response) = try await client.getSession().data(from: url)
+        // ✅ Use the request, not the raw url
+        let (data, response) = try await client.getSession().data(for: request)
         
         
 
@@ -59,7 +59,8 @@ struct BoardGameService {
         var request = URLRequest(url: url)
         //try client.authorizedRequest(&request, accessToken: accessToken)
         
-        let (data, response) = try await client.getSession().data(from: url)
+        // ✅ Use the request, not the raw url
+        let (data, response) = try await client.getSession().data(for: request)
         
         
 
@@ -80,7 +81,8 @@ struct BoardGameService {
         let request = URLRequest(url: url)
         //try client.authorizedRequest(&request, accessToken: accessToken)
         
-        let (data, response) = try await client.getSession().data(from: url)
+        // ✅ Use the request, not the raw url
+        let (data, response) = try await client.getSession().data(for: request)
         
         
 
