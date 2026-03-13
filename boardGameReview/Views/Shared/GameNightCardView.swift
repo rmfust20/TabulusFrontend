@@ -9,7 +9,9 @@ import SwiftUI
 
 struct GameNightCardView: View {
     let gameNight : GameNightModel
-    let boardGames: [Int: [String]]
+    let imageService: ImageService = ImageService()
+    let boardGames: [(Int,String)]
+    @State private var gameNightImages: [String] = []
     var body: some View {
         VStack{
             HStack {
@@ -27,44 +29,72 @@ struct GameNightCardView: View {
                     .padding(.horizontal, 8)
             }
             .padding(.horizontal)
-            if let images = gameNight.images {
-                ScrollView(.horizontal) {
-                    HStack {
-                        ForEach(images, id: \.self) { urlString in
-                            AsyncImage(url: URL(string: urlString)) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                ProgressView()
+                if gameNightImages.count == 1, let urlString = gameNightImages.first {
+                    AsyncImage(url: URL(string: urlString)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .frame(width: 230, height: 230)
+                    .clipped()
+                    .cornerRadius(5)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal)
+                } else {
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(gameNightImages, id: \.self) { urlString in
+                                AsyncImage(url: URL(string: urlString)) { image in
+                                    image.resizable().scaledToFill()
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                                .frame(width: 230, height: 230)
+                                .clipped()
+                                .cornerRadius(5)
                             }
-                            .frame(width: 230, height: 230)
-                            .clipped()
-                            .cornerRadius(5)
                         }
                     }
+                    .padding(.horizontal)
                 }
+            Rectangle()
+                .fill(Color("WantToPlayButton"))
+                .frame(maxWidth: .infinity, maxHeight: 30)
                 .padding(.horizontal)
-            }
-          
-            if let images = boardGames[181] {
-                ScrollView(.horizontal) {
-                    HStack {
-                        ForEach(images, id: \.self) { urlString in
-                            AsyncImage(url: URL(string: urlString)) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                ProgressView()
+            
+                if boardGames.count == 1, let item = boardGames.first {
+                    AsyncImage(url: URL(string: item.1)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .frame(width: 180, height: 250)
+                    .clipped()
+                    .cornerRadius(5)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                } else {
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(boardGames, id: \.0) { item in
+                                AsyncImage(url: URL(string: item.1)) { image in
+                                    image.resizable().scaledToFill()
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                                .frame(width: 180, height: 250)
+                                .clipped()
+                                .cornerRadius(5)
                             }
-                            .frame(width: 180, height: 250)
-                            .clipped()
-                            .cornerRadius(5)
                         }
                     }
+                    .padding()
                 }
-                .padding()
-            }
             Text(gameNight.description ?? "")
                 .multilineTextAlignment(.leading)
-            
+                .onAppear {
+                    print(boardGames)
+                }
             HStack {
                 Image("userProfile")
                     .resizable()
@@ -108,14 +138,18 @@ struct GameNightCardView: View {
                         .font(.title)
                 }.buttonStyle(.plain)
             }
-            .padding(.horizontal,15)
+            .padding()
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(lineWidth: 1)
-                .fill(Color.gray)
-        )
-        .padding()
+        .onAppear {
+            Task {
+                if let images = gameNight.images {
+                    let trueImages = try? await imageService.getImageURLs(blobNames: images)
+                    if let trueImages = trueImages {
+                        gameNightImages = trueImages
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -131,6 +165,6 @@ struct GameNightCardView: View {
             ],
             images: ["https://www.moongiant.com/images/todays_moon_phase.jpg", "https://upload.wikimedia.org/wikipedia/commons/1/10/Supermoon_Nov-14-2016-minneapolis.jpg", "https://media.wired.com/photos/5c425dd1ce277c2cb23d5667/master/pass/Blood-Moon-586081787.jpg"],
             users: []
-        ), boardGames: [181: ["https://cf.geekdo-images.com/t09C6AsUI_ApPp1wm6XH-A__imagepage@2x/img/ZXdalhNNwSbya2zWI7XvMyDmxOE=/fit-in/1800x1200/filters:strip_icc()/pic9437664.jpg", "https://cf.geekdo-images.com/OnNFPEHOFUcCcCwuJANZSA__itemrep@2x/img/sgZ4zVZ4gMKjKMly68lEK1tQuo8=/fit-in/492x600/filters:strip_icc()/pic8251132.jpg"]]
+        ), boardGames: [(181, "https://cf.geekdo-images.com/Oem1TTtSgxOghRFCoyWRPw__original/img/Nu3eXPyOkhtnR3hhpUrtgqRMAfs=/0x0/filters:format(jpeg)/pic4916782.jpg")]
     )
 }

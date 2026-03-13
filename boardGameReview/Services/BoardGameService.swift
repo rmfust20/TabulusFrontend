@@ -8,7 +8,7 @@ struct BoardGameService {
     init(client: APIClient = APIClient.shared) {
         self.client = client
         //self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
-        self.baseURL = "http://localhost:8000"
+        self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
     }
     
     func fetchGeneralTrendingFeed(accessToken: String) async throws -> [BoardGameModel] {
@@ -29,6 +29,27 @@ struct BoardGameService {
         let boardGames = try JSONDecoder().decode([BoardGameModel].self, from: data)
         return boardGames
     }
+    
+    func fetchBoardGamesByIds(ids: [Int]) async throws -> [BoardGameModel] {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/boardGames/boardGamesByIds"
+        components?.queryItems = ids.map { URLQueryItem(name: "board_game_ids", value: String($0)) }
+        guard let url = components?.url else { throw APIError.invalidURL }
+        
+        let request = URLRequest(url: url)
+        //try client.authorizedRequest(&request, accessToken: accessToken)
+        
+        let (data, response) = try await client.getSession().data(for: request)
+        
+        
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+        
+        let boardGames = try JSONDecoder().decode([BoardGameModel].self, from: data)
+        return boardGames
+    }
+        
+        
     
     func fetchTrendingWithFriends(userID: Int, accessToken: String) async throws -> [BoardGameModel] {
         var components = URLComponents(string: baseURL)

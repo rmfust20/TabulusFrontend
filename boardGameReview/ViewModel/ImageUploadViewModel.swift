@@ -13,7 +13,7 @@ final class ImageUploadViewModel: ObservableObject {
     let imageService: ImageService = ImageService()
     
     @MainActor
-    func uploadSelected() async {
+    func uploadSelected(auth: Auth) async {
         guard !selectedItems.isEmpty else { return }
         errorMessage = nil
         uploaded = []
@@ -21,7 +21,7 @@ final class ImageUploadViewModel: ObservableObject {
         defer { isUploading = false }
         
         do {
-            uploaded = try await imageService.uploadSelectedImages(selectedImages: selectedItems)
+            uploaded = try await imageService.uploadSelectedImages(selectedImages: selectedItems, accessToken: auth.accessToken ?? "")
         }
         
         catch {

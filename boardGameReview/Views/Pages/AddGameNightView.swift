@@ -91,7 +91,7 @@ struct AddGameNightView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task {
-                            await imageUploadViewModel.uploadSelected()
+                            await imageUploadViewModel.uploadSelected(auth: auth)
                             await gameNightViewModel.uploadGameNight(
                                 auth: auth, images: imageUploadViewModel.uploaded
                             )

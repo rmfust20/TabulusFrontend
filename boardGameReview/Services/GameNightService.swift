@@ -13,7 +13,7 @@ struct GameNightService {
 
     init(client: APIClient = APIClient.shared) {
         self.client = client
-        self.baseURL = "http://localhost:8000"
+        self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
     }
     
     func getUserFriends(userID: Int) async throws -> [UserPublicModel] {
@@ -58,6 +58,7 @@ struct GameNightService {
     }
     
     func getGameNightFeed(userID : Int) async throws -> [GameNightModel]{
+        print(userID)
         var components = URLComponents(string: baseURL)
         components?.path = "/gameNights/userFeed/\(userID)"
         guard let url = components?.url else { throw APIError.invalidURL }
@@ -75,6 +76,7 @@ struct GameNightService {
         
         let gameNights = try JSONDecoder().decode([GameNightModel].self, from: data)
         print("are we getting data here?")
+        print(gameNights)
         return gameNights
     }
 }

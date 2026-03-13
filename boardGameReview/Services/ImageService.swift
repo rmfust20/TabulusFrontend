@@ -16,10 +16,10 @@ struct ImageService {
     
     init(client: APIClient = APIClient.shared) {
         self.client = client
-        self.baseURL = "http://localhost:8000"
+        self.baseURL = "https://tabulusapp.bravegrass-0afbc7b6.westus2.azurecontainerapps.io"
     }
     
-    func uploadSelectedImages(selectedImages : [PhotosPickerItem]) async throws -> [UploadImagesResponse.UploadedFile] {
+    func uploadSelectedImages(selectedImages : [PhotosPickerItem], accessToken: String) async throws -> [UploadImagesResponse.UploadedFile] {
         do {
             // Load up to 5 (PhotosPicker enforces, but we’ll be safe)
             let items = Array(selectedImages.prefix(5))
@@ -49,7 +49,7 @@ struct ImageService {
             }
 
             // Upload as multipart with multiple "files" parts
-            let resp = try await uploadImages(files: files)
+            let resp = try await uploadImages(files: files, accessToken: accessToken)
             let uploaded = resp.uploads
             return uploaded
 
@@ -58,12 +58,13 @@ struct ImageService {
         }
     }
     
-    private func uploadImages(files: [(data: Data, mimeType: String, filename: String)]) async throws -> UploadImagesResponse {
+    private func uploadImages(files: [(data: Data, mimeType: String, filename: String)], accessToken: String) async throws -> UploadImagesResponse {
         var components = URLComponents(string: baseURL)
         components?.path = "/images/upload"
         guard let url = components?.url else { throw APIError.invalidURL }
         
         var request = URLRequest(url: url)
+        try client.authorizedRequest(&request, accessToken: accessToken)
         
         request.httpMethod = "POST"
 
