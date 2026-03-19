@@ -11,9 +11,9 @@ struct RegisterView: View {
     let userID: Int
     @EnvironmentObject var auth : Auth
     @EnvironmentObject var userViewModel : UserViewModel
-    @State private var username: String = "m37709"
-    @State private var email : String = "robertfusting@gmail.com5"
-    @State private var password: String = "bobee"
+    @State private var username: String = "cow1"
+    @State private var email : String = "robertfusting@gmail.com0000"
+    @State private var password: String = "bobeeeqwhru382ee"
     var body: some View {
         Button {
             Task {

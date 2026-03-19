@@ -11,7 +11,7 @@ class UserViewModel: ObservableObject {
     var userService = UserService()
     
     func register(username: String, email: String, password: String, authStore : Auth) async {
-        let user = UserModel(id: nil, username: username, email: email, password: password)
+        let user = UserModel(id: nil, username: username, email: email, password: password, profile_image_url: nil)
         let creds = try? await userService.registerUser(user: user)
         
         if creds != nil {

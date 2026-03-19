@@ -66,4 +66,13 @@ class GameNightFeedViewModel: ObservableObject {
             self.imageURLs[id]?.append(url)
         }
     }
+    
+    @MainActor
+    func fetchUserGameNights(userID: Int) async {
+        let nights = try? await gameNightService.getUserGameNights(userID: userID)
+
+        if let nights {
+            self.gameNights = nights
+        }
+    }
 }

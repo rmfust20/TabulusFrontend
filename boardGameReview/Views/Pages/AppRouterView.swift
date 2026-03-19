@@ -11,6 +11,8 @@ enum AppRoute: Hashable {
     case boardGame(id: Int)
     case addReview(id: Int, rating : Int?)
     case addGameNight(id: Int)
+    case profile(id: Int)
+    case gameNightFeed(userOnly: Bool)
 }
 
 struct AppNavRouter<Root: View>: View {
@@ -40,6 +42,10 @@ struct AppNavRouter<Root: View>: View {
             AddGameNightView(userID: id)
         case .addReview(let id, let rating):
             AddReviewView(boardGameID: id, rating: rating ?? 0)
+        case .profile(let id):
+            ProfileView(userID: id)
+        case .gameNightFeed(let userOnly):
+            GameNightFeedView(userOnly: userOnly)
         }
     }
 }

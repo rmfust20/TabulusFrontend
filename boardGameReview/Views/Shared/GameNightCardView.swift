@@ -13,22 +13,22 @@ struct GameNightCardView: View {
     let boardGames: [(Int,String)]
     @State private var gameNightImages: [String] = []
     var body: some View {
-        VStack{
-            HStack {
-                Image("userProfile")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
-                VStack {
-                    Text("Robert Fusiting")
-                    Text("May 9th 2001")
+            VStack{
+                HStack {
+                    Image("userProfile")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                    VStack {
+                        Text("Robert Fusiting")
+                        Text("May 9th 2001")
+                    }
+                    Spacer()
+                    Image(systemName: "ellipsis")
+                        .padding(.horizontal, 8)
                 }
-                Spacer()
-                Image(systemName: "ellipsis")
-                    .padding(.horizontal, 8)
-            }
-            .padding(.horizontal)
+                .padding(.horizontal)
                 if gameNightImages.count == 1, let urlString = gameNightImages.first {
                     AsyncImage(url: URL(string: urlString)) { image in
                         image.resizable().scaledToFill()
@@ -56,12 +56,7 @@ struct GameNightCardView: View {
                         }
                     }
                     .padding(.horizontal)
-                }
-            Rectangle()
-                .fill(Color("WantToPlayButton"))
-                .frame(maxWidth: .infinity, maxHeight: 30)
-                .padding(.horizontal)
-            
+                }                
                 if boardGames.count == 1, let item = boardGames.first {
                     AsyncImage(url: URL(string: item.1)) { image in
                         image.resizable().scaledToFill()
@@ -90,65 +85,65 @@ struct GameNightCardView: View {
                     }
                     .padding()
                 }
-            Text(gameNight.description ?? "")
-                .multilineTextAlignment(.leading)
-                .onAppear {
-                    print(boardGames)
-                }
-            HStack {
-                Image("userProfile")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 45, height: 45)
-                    .clipShape(Circle())
-                    .padding(.horizontal, -15)
-                
-                Image("userProfile")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 45, height: 45)
-                    .clipShape(Circle())
-                    .padding(.horizontal,-15)
-                
-                Image("userProfile")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 45, height: 45)
-                    .clipShape(Circle())
-                    .padding(.leading,-15)
-                
-                Text("liked this")
-                Spacer()
-                Text("5 Comments")
-                
-                
-            }
-            .padding(.horizontal,15)
-            
-            HStack {
-                Button {
+                Text(gameNight.description ?? "")
+                    .multilineTextAlignment(.leading)
+                    .onAppear {
+                        print(boardGames)
+                    }
+                HStack {
+                    Image("userProfile")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 45, height: 45)
+                        .clipShape(Circle())
+                        .padding(.horizontal, -15)
                     
-                } label : {
-                    Image(systemName: "hand.thumbsup")
-                        .font(.title)
-                }.buttonStyle(.plain)
-                Spacer()
-                Button {} label: {
-                    Image(systemName: "text.bubble")
-                        .font(.title)
-                }.buttonStyle(.plain)
+                    Image("userProfile")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 45, height: 45)
+                        .clipShape(Circle())
+                        .padding(.horizontal,-15)
+                    
+                    Image("userProfile")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 45, height: 45)
+                        .clipShape(Circle())
+                        .padding(.leading,-15)
+                    
+                    Text("liked this")
+                    Spacer()
+                    Text("5 Comments")
+                    
+                    
+                }
+                .padding(.horizontal,15)
+                
+                HStack {
+                    Button {
+                        
+                    } label : {
+                        Image(systemName: "hand.thumbsup")
+                            .font(.title)
+                    }.buttonStyle(.plain)
+                    Spacer()
+                    Button {} label: {
+                        Image(systemName: "text.bubble")
+                            .font(.title)
+                    }.buttonStyle(.plain)
+                }
+                .padding()
             }
-            .padding()
-        }
-        .onAppear {
-            Task {
-                if let images = gameNight.images {
-                    let trueImages = try? await imageService.getImageURLs(blobNames: images)
-                    if let trueImages = trueImages {
-                        gameNightImages = trueImages
+            .onAppear {
+                Task {
+                    if let images = gameNight.images {
+                        let trueImages = try? await imageService.getImageURLs(blobNames: images)
+                        if let trueImages = trueImages {
+                            gameNightImages = trueImages
+                        }
                     }
                 }
-            }
         }
     }
 }

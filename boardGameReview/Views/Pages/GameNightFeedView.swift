@@ -11,6 +11,7 @@ struct GameNightFeedView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var auth: Auth
     @StateObject private var gameNightFeedViewModel = GameNightFeedViewModel()
+    let userOnly: Bool
     var body: some View {
         ScrollView {
             ZStack {
@@ -35,8 +36,25 @@ struct GameNightFeedView: View {
                     }
                     .onAppear {
                         Task {
-                            await gameNightFeedViewModel.fetchGameNights(userID: auth.userID ?? 1)
-                            await gameNightFeedViewModel.fetchBoardGameDetails()
+                            if userOnly == true {
+                                await gameNightFeedViewModel.fetchUserGameNights(userID: auth.userID ?? 1)
+                            } else {
+                                await gameNightFeedViewModel.fetchGameNights(userID: auth.userID ?? 1)
+                            }
+                            async let boardGames: () = gameNightFeedViewModel.fetchBoardGameDetails()
+                            async let imageURLs: () = {
+                                await withTaskGroup(of: Void.self) { group in
+                                    for gameNight in await gameNightFeedViewModel.gameNights {
+                                        let id = gameNight.id
+                                        let blobNames = gameNight.images ?? []
+                                        group.addTask {
+                                            await gameNightFeedViewModel.fetchImageURLFromBlob(id: id, blobNames: blobNames)
+                                        }
+                                    }
+                                }
+                            }()
+                            await boardGames
+                            await imageURLs
                         }
                     }
                 }
@@ -53,7 +71,7 @@ struct GameNightFeedView: View {
           token_type: "bearer",
           user: RegisterResponse(username: "previewUser", id: 2)
       ))
-      return GameNightFeedView()
+    return GameNightFeedView(userOnly: false)
           .environmentObject(auth)
           .environmentObject(AppRouter())
   }

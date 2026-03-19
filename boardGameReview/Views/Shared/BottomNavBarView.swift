@@ -13,6 +13,7 @@ enum Tab: Hashable {
 
 struct BottomNavBarView: View {
     @State private var selectedTab: Tab = .home
+    @EnvironmentObject private var auth: Auth
     var body: some View {
         TabView(selection: $selectedTab) {
 
@@ -20,9 +21,7 @@ struct BottomNavBarView: View {
                 .tabItem { Label("Home", systemImage: "house") }
                 .tag(Tab.home)
 
-                    NavigationStack {
-                        ProfileView(userID: 0)
-                    }
+                AppNavRouter(selectedTab: $selectedTab) { ProfileView(userID: auth.userID ?? 0) }
                     .tabItem { Label("Profile", systemImage: "person") }
                     .tag(Tab.profile)
             NavigationStack {
@@ -33,7 +32,7 @@ struct BottomNavBarView: View {
                     }
                     .tag(Tab.login)
             
-            AppNavRouter(selectedTab: $selectedTab) { GameNightFeedView() }
+            AppNavRouter(selectedTab: $selectedTab) { GameNightFeedView(userOnly: false) }
                 .tabItem { Label("Game", systemImage: "calendar") }
                 .tag(Tab.game)
                 
