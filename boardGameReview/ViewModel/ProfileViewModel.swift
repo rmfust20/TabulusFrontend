@@ -26,6 +26,8 @@ class ProfileViewModel: ObservableObject {
     @Published var userFriends: [UserPublicModel] = []
     @Published var filteredFriends: [UserPublicModel] = []
     @Published var pendingFriends: [UserPublicModel] = []
+    @Published var userSearchResults: [UserPublicModel] = []
+    @Published var sentFriendRequestIDs: Set<Int> = []
 
     init(boardGameService: BoardGameService = BoardGameService(), gameNightService: GameNightService = GameNightService(), imageService: ImageService = ImageService(), userService: UserService = UserService()) {
         self.boardGameService = boardGameService
@@ -138,10 +140,10 @@ class ProfileViewModel: ObservableObject {
         filteredFriends.sort { $0.username.lowercased() < $1.username.lowercased() }
     }
     
+    @MainActor
     func sendFriendRequest(userID: Int, friendID: Int, auth: Auth) async {
-        do {
-            try? await userService.sendFriendRequest(userID: userID, friendID: friendID, accessToken: auth.accessToken ?? "")
-        }
+        try? await userService.sendFriendRequest(userID: userID, friendID: friendID, accessToken: auth.accessToken ?? "")
+        sentFriendRequestIDs.insert(friendID)
     }
     
     @MainActor
@@ -161,5 +163,41 @@ class ProfileViewModel: ObservableObject {
         }
         
         pendingFriends.removeAll { $0.id == friendID }
+    }
+    
+    @MainActor
+    func acceptFreiendRequest(userID: Int, friendID: Int, auth: Auth) async {
+        do {
+            try? await userService.acceptFriend(userID: userID, friendID: friendID, accessToken: auth.accessToken ?? "")
+        }
+        pendingFriends.removeAll { $0.id == friendID }
+    }
+
+    @MainActor
+    func logout(auth: Auth) async {
+        try? await userService.logout(refreshToken: auth.refreshToken ?? "")
+        auth.clear()
+    }
+
+    @MainActor
+    func deleteAccount(auth: Auth) async {
+        try? await userService.deleteAccount(accessToken: auth.accessToken ?? "")
+        auth.clear()
+    }
+
+    @MainActor
+    func loadSentFriendRequests(auth: Auth) async {
+        let sent = try? await userService.getSentFriendRequests(userID: auth.userID ?? 0, accessToken: auth.accessToken ?? "")
+        sentFriendRequestIDs = Set((sent ?? []).map { $0.id })
+    }
+
+    @MainActor
+    func searchUsers(query: String) async {
+        guard !query.isEmpty else {
+            userSearchResults = []
+            return
+        }
+        let results = try? await userService.searchUsers(username: query)
+        userSearchResults = results ?? []
     }
 }

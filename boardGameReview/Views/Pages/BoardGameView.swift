@@ -15,7 +15,11 @@ struct BoardGameView: View {
     @State var cardImage: UIImage? = nil
     @State var boardGame: BoardGameModel? = nil
     @State var designers: [String] = []
+    @State private var showDeleteConfirmation = false
+    @State private var isNavigatingToAddReview = false
+    @State private var isDescriptionExpanded = false
     @StateObject private var boardGameViewModel: BoardGameViewModel
+    @StateObject private var reviewViewModel = ReviewViewModel()
 
     init(boardGameID: Int) {
         self.boardGameID = boardGameID
@@ -122,46 +126,60 @@ struct BoardGameView: View {
                         }
                     }
 
-                    // Action row
-                    HStack(spacing: 12) {
-                        WantToPlayButtonView()
-                        Spacer()
+                   
+
+                    // Description
+                    if let description = boardGame?.description, !description.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(description)
+                                .font(.system(size: 14))
+                                .foregroundStyle(.white.opacity(0.75))
+                                .lineLimit(isDescriptionExpanded ? nil : 3)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isDescriptionExpanded.toggle()
+                                }
+                            } label: {
+                                Text(isDescriptionExpanded ? "See Less" : "See More")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color("PrimaryButton"))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
 
                     // Rate + write review
-                    RateThisGameFullView(id: boardGameID, rating: $boardGameViewModel.userRating)
+                    RateThisGameFullView(id: boardGameID, rating: $boardGameViewModel.userRating, review: boardGameViewModel.userReview, onNavigateToReview: { isNavigatingToAddReview = true })
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
 
-                    // More info + Share
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 6) {
-                            Image(systemName: "info.circle.fill")
-                                .font(.system(size: 28))
-                                .foregroundStyle(Color("MutedText"))
-                            Text("More Info")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color("MutedText"))
+                    if boardGameViewModel.userReview?.comment != nil {
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Text("Delete this review")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.red)
                         }
-                        Spacer()
-                        Rectangle()
-                            .fill(.white.opacity(0.08))
-                            .frame(width: 1, height: 40)
-                        Spacer()
-                        VStack(spacing: 6) {
-                            Image(systemName: "arrowshape.turn.up.forward.circle.fill")
-                                .font(.system(size: 28))
-                                .foregroundStyle(Color("MutedText"))
-                            Text("Share")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color("MutedText"))
+                        .padding(.top, 6)
+                        .confirmationDialog("Are you sure you want to delete your review?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                            Button("Delete", role: .destructive) {
+                                Task {
+                                    if let review = boardGameViewModel.userReview {
+                                        try? await boardGameViewModel.deleteReview(reviewID: review.id!, accessToken: auth.accessToken ?? "")
+                                        boardGameViewModel.userReview = nil
+                                        boardGameViewModel.userRating = 0
+                                    }
+                                }
+                            }
+                            Button("Cancel", role: .cancel) {}
                         }
-                        Spacer()
                     }
-                    .padding(.vertical, 24)
 
                     // Reviews
                     if !boardGameViewModel.reviews.isEmpty {
@@ -172,16 +190,16 @@ struct BoardGameView: View {
                             Spacer()
                         }
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 4)
+                        .padding(.vertical)
 
                         Rectangle()
                             .fill(.white.opacity(0.08))
                             .frame(maxWidth: .infinity, maxHeight: 1)
 
-                        LazyVStack(spacing: 0) {
+                        LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(boardGameViewModel.reviews) { review in
                                 Button {
-                                    router.push(.profile(id: review.user_id))
+                                    router.push(.profile(id: review.user_id, username: review.username))
                                 } label: {
                                     ReviewCardView(reviewModel: review)
                                         .padding(.horizontal, 20)
@@ -201,6 +219,24 @@ struct BoardGameView: View {
             }
         }
         .edgesIgnoringSafeArea(.top)
+        .onDisappear {
+            guard !isNavigatingToAddReview else {
+                isNavigatingToAddReview = false
+                return
+            }
+            guard boardGameViewModel.userReview == nil && boardGameViewModel.userRating > 0 else { return }
+            Task {
+                let reviewModel = ReviewModel(
+                    id: nil,
+                    board_game_id: boardGameID,
+                    user_id: auth.userID ?? 0,
+                    username: auth.username ?? "unknown",
+                    rating: boardGameViewModel.userRating,
+                    comment: nil
+                )
+                try? await reviewViewModel.postReview(reviewModel, accessToken: auth.accessToken ?? "")
+            }
+        }
     }
 }
 

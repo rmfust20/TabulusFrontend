@@ -12,8 +12,16 @@ struct AddReviewView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var auth: Auth
     @State var rating: Int
-    @State private var text: String = ""
+    @State private var text: String
+    @State private var existingReview: ReviewModel?
     @StateObject private var reviewViewModel = ReviewViewModel()
+
+    init(boardGameID: Int, rating: Int, review: ReviewModel?) {
+        self.boardGameID = boardGameID
+        self._rating = State(initialValue: rating)
+        self._text = State(initialValue: review?.comment ?? "")
+        self._existingReview = State(initialValue: review)
+    }
 
     var body: some View {
         ZStack {
@@ -66,24 +74,41 @@ struct AddReviewView: View {
             .padding(.horizontal, 16)
             .padding(.top, 20)
         }
+        .onAppear {
+            Task {
+                if let fetched = try? await reviewViewModel.reviewService.getUserReview(
+                    boardGameID: boardGameID, userID: auth.userID ?? 0
+                ) {
+                    existingReview = fetched
+                    if text.isEmpty { text = fetched.comment ?? "" }
+                }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Post") {
+                Button(existingReview != nil ? "Save" : "Post") {
                     Task {
-                        let reviewModel = ReviewModel(
-                            id: nil,
-                            board_game_id: boardGameID,
-                            user_id: auth.userID ?? 0,
-                            username: auth.username ?? "unknown",
-                            rating: rating,
-                            comment: text
-                        )
-
                         do {
-                            try await reviewViewModel.postReview(reviewModel, accessToken: auth.accessToken ?? "")
+                            if let existing = existingReview {
+                                try await reviewViewModel.updateReview(
+                                    reviewID: existing.id!,
+                                    review: ReviewUpdate(id: existing.id!, rating: rating, comment: text),
+                                    accessToken: auth.accessToken ?? ""
+                                )
+                            } else {
+                                let reviewModel = ReviewModel(
+                                    id: nil,
+                                    board_game_id: boardGameID,
+                                    user_id: auth.userID ?? 0,
+                                    username: auth.username ?? "unknown",
+                                    rating: rating,
+                                    comment: text
+                                )
+                                try await reviewViewModel.postReview(reviewModel, accessToken: auth.accessToken ?? "")
+                            }
                             router.pop()
                         } catch {
-                            print("Error posting review: \(error)")
+                            print("Error saving review: \(error)")
                         }
                     }
                 }
@@ -95,5 +120,5 @@ struct AddReviewView: View {
 }
 
 #Preview {
-    AddReviewView(boardGameID: 0, rating: 0)
+    AddReviewView(boardGameID: 0, rating: 0, review: nil)
 }

@@ -13,8 +13,11 @@ struct ProfileView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var auth: Auth
     @State private var addFriendsPresented: Bool = false
-    @State private var pendingFriendsPresented: Bool = false
+    @State private var showAccountOptions: Bool = false
+    @State private var showLogoutConfirm: Bool = false
+    @State private var showDeleteConfirm: Bool = false
     let userID: Int
+    let username: String?
 
     var body: some View {
         ZStack {
@@ -22,52 +25,64 @@ struct ProfileView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
+                    Button {
+                        showAccountOptions = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, -20)
+                    .confirmationDialog("Account", isPresented: $showAccountOptions) {
+                        Button("Log Out") { showLogoutConfirm = true }
+                        Button("Delete Account", role: .destructive) { showDeleteConfirm = true }
+                        Button("Cancel", role: .cancel) {}
+                    }
+                    .alert("Log Out?", isPresented: $showLogoutConfirm) {
+                        Button("Log Out", role: .destructive) {
+                            Task { await profileViewModel.logout(auth: auth) }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Are you sure you want to log out?")
+                    }
+                    .alert("Delete Account?", isPresented: $showDeleteConfirm) {
+                        Button("Delete", role: .destructive) {
+                            Task { await profileViewModel.deleteAccount(auth: auth) }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This will permanently delete your account and all your data. This cannot be undone.")
+                    }
                     // Header
                     HStack(alignment: .center) {
-                        Text(auth.username ?? "Loading...")
+                        Text(username ?? "Loading...")
                             .font(.system(size: 30, weight: .bold))
                             .foregroundStyle(.white)
                         Spacer()
-                        if userID != auth.userID {
-                            Button {
-                                Task {
-                                    await profileViewModel.sendFriendRequest(userID: auth.userID ?? 0, friendID: userID, auth: auth)
-                                }
-                            } label: {
-                                Text("Add Friend")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(Color("PrimaryButton"))
-                                    .clipShape(Capsule())
-                            }
-                        } else {
-                            HStack(spacing: 12) {
+                        if userID != auth.userID{
+                            if !profileViewModel.userFriends.contains(where: { $0.id == auth.userID ?? 0 }) && !profileViewModel.pendingFriends.contains(where: { $0.id == auth.userID ?? 0 })
+                            {
                                 Button {
-                                    pendingFriendsPresented.toggle()
+                                    Task {
+                                        await profileViewModel.sendFriendRequest(userID: auth.userID ?? 0, friendID: userID, auth: auth)
+                                    }
                                 } label: {
-                                    Image(systemName: "person.crop.circle")
-                                        .font(.system(size: 22))
+                                    Text("Add Friend")
+                                        .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(.white)
-                                        .overlay(alignment: .topTrailing) {
-                                            if profileViewModel.pendingFriends.count > 0 {
-                                                Text("\(profileViewModel.pendingFriends.count)")
-                                                    .font(.caption2)
-                                                    .fontWeight(.bold)
-                                                    .foregroundStyle(.white)
-                                                    .padding(4)
-                                                    .background(Color.red)
-                                                    .clipShape(Circle())
-                                                    .offset(x: 6, y: -6)
-                                            }
-                                        }
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(Color("PrimaryButton"))
+                                        .clipShape(Capsule())
                                 }
                             }
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .padding(.top, 10)
 
                     // Profile card
                     HStack(alignment: .center, spacing: 24) {
@@ -92,6 +107,7 @@ struct ProfileView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .tint(.blue)
                         .onChange(of: profileViewModel.selectedItem) { oldValue, newValue in
                             Task {
                                 await profileViewModel.handleImageChange(auth: auth)
@@ -106,6 +122,23 @@ struct ProfileView: View {
                             addFriendsPresented.toggle()
                         } label: {
                             ProfileStatBadge(value: String(profileViewModel.userFriends.count), label: "Friends")
+                                .overlay(alignment: .topTrailing) {
+                                    if profileViewModel.userFriends.count == 0 {
+                                        Text("add")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 2)
+                                            .background(Color.red)
+                                            .clipShape(Capsule())
+                                            .offset(x: 10, y: -6)
+                                    } else if profileViewModel.pendingFriends.count > 0 {
+                                        Circle()
+                                            .fill(Color.red)
+                                            .frame(width: 9, height: 9)
+                                            .offset(x: 4, y: -2)
+                                    }
+                                }
                         }
                         .buttonStyle(.plain)
 
@@ -176,7 +209,7 @@ struct ProfileView: View {
                         }
                         .onAppear {
                             Task {
-                                await profileViewModel.getUserFriends(userID: 1)
+                                await profileViewModel.getUserFriends(userID: userID)
                                 async let pendingFriends: () = profileViewModel.getUserFriendsPending(userID: auth.userID ?? 0, auth: auth)
                                 await pendingFriends
                                 async let boardGames: () = profileViewModel.fetchUserBoardGames(userID: userID)
@@ -201,10 +234,7 @@ struct ProfileView: View {
                 }
             }
             .fullScreenCover(isPresented: $addFriendsPresented) {
-                TagFriendsProfile(profileViewModel: profileViewModel, isPresented: $addFriendsPresented)
-            }
-            .fullScreenCover(isPresented: $pendingFriendsPresented) {
-                PendingFriendsProfile(profileViewModel: profileViewModel, isPresented: $pendingFriendsPresented)
+                FriendsSheet(profileViewModel: profileViewModel, isPresented: $addFriendsPresented, userID: userID)
             }
         }
     }
@@ -303,92 +333,83 @@ private struct ProfileStatBadge: View {
     }
 }
 
-// MARK: - Pending Friends Sheet
+// MARK: - Pending Friend Row
 
-struct PendingFriendsProfile: View {
-    @EnvironmentObject private var router: AppRouter
-    @ObservedObject var profileViewModel: ProfileViewModel
-    @Binding var isPresented: Bool
-    @EnvironmentObject private var auth: Auth
+private struct PendingFriendRow: View {
+    let friend: UserPublicModel
+    let onTap: () -> Void
+    let onAccept: () -> Void
+    let onDecline: () -> Void
+    @State private var profileImageURL: String? = nil
+    private let userService = UserService()
+    private let imageService = ImageService()
 
     var body: some View {
-        ZStack {
-            Color("CharcoalBackground").ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Friend Requests")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(.white)
-                    Spacer()
-                    Button {
-                        isPresented.toggle()
-                    } label: {
-                        Text("Done")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color("PrimaryButton"))
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 12) {
-                        ForEach(profileViewModel.pendingFriends) { friend in
-                            Button {
-                                router.push(.profile(id: friend.id))
-                            } label: {
-                                    HStack(spacing: 14) {
-                                        Image(systemName: "person.circle.fill")
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 46, height: 46)
-                                            .foregroundStyle(Color("MutedText"))
-                                        Text(friend.username)
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundStyle(.white)
-                                        Spacer()
-                                        Button{
-                                            print("hello mello bello")
-                                        } label: {
-                                            Text("Accept")
-                                                .font(.system(size: 15, weight: .semibold))
-                                                .foregroundStyle(Color("MutedText"))
-                                        }
-                                    }
-                                    .padding(14)
-                                    .background(Color("CardSurface"))
-                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                Button {
-                                    Task {
-                                        await profileViewModel.declineFriendRequest(userID: auth.userID ?? 0, friendID: friend.id, auth: auth)
-                                    }
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundStyle(Color("MutedText"))
-                                }
-
+        HStack(spacing: 14) {
+            Button {
+                onTap()
+            } label: {
+                HStack(spacing: 14) {
+                    Group {
+                        if let url = profileImageURL {
+                            AsyncImage(url: URL(string: url)) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                ProgressView()
                             }
+                        } else {
+                            Image(systemName: "person.circle.fill")
+                                .resizable()
+                                .foregroundStyle(Color("MutedText"))
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 32)
+                    .frame(width: 46, height: 46)
+                    .clipShape(Circle())
+                    Text(friend.username)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                }
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                onAccept()
+            } label: {
+                Text("Accept")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color("MutedText"))
+            }
+
+            Button {
+                onDecline()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color("MutedText"))
+            }
+        }
+        .onAppear {
+            Task {
+                if let blobName = (try? await userService.getUser(userID: friend.id))?.profile_image_url {
+                    profileImageURL = try? await imageService.getImageURL(blobName: blobName)
                 }
             }
         }
     }
 }
 
-// MARK: - Tag Friends Sheet
+// MARK: - Friends Sheet
 
-struct TagFriendsProfile: View {
+struct FriendsSheet: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var auth: Auth
     @ObservedObject var profileViewModel: ProfileViewModel
     @Binding var isPresented: Bool
-    @State var searchText: String = ""
-    @State var taggedFriends: [String] = []
+    let userID: Int
+    @State private var selectedTab: Int = 0
+    @State private var searchText: String = ""
+    @State private var findSearchText: String = ""
 
     var body: some View {
         ZStack {
@@ -412,59 +433,252 @@ struct TagFriendsProfile: View {
                 .padding(.top, 20)
                 .padding(.bottom, 16)
 
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color("MutedText"))
-                    TextField("Search friends", text: $searchText)
-                        .foregroundStyle(.white)
-                        .tint(Color("PrimaryButton"))
-                        .onChange(of: searchText) {
-                            profileViewModel.filterFriends(searchText: searchText)
+                HStack(spacing: 0) {
+                    ForEach([
+                        (0, "Friends"),
+                        (1, profileViewModel.pendingFriends.isEmpty ? "Incoming" : "Incoming (\(profileViewModel.pendingFriends.count))"),
+                        (2, "Add")
+                    ], id: \.0) { tab, label in
+                        Button {
+                            selectedTab = tab
+                        } label: {
+                            Text(label)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(selectedTab == tab ? .white : Color("MutedText"))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(selectedTab == tab ? Color("PrimaryButton") : Color.clear)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(4)
                 .background(Color("CardSurface"))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
 
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 12) {
-                        ForEach(profileViewModel.filteredFriends) { friend in
-                            Button {
-                                router.push(.profile(id: friend.id))
-                            } label: {
-                                HStack(spacing: 14) {
-                                    Image(systemName: "person.circle.fill")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 46, height: 46)
-                                        .foregroundStyle(Color("MutedText"))
-                                    Text(friend.username)
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(Color("MutedText"))
+                if selectedTab == 0 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color("MutedText"))
+                        TextField("Search friends", text: $searchText)
+                            .foregroundStyle(.white)
+                            .tint(Color("PrimaryButton"))
+                            .onChange(of: searchText) {
+                                profileViewModel.filterFriends(searchText: searchText)
+                            }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color("CardSurface"))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 12) {
+                            ForEach(profileViewModel.filteredFriends) { friend in
+                                TagFriendRow(friend: friend) {
+                                    router.push(.profile(id: friend.id, username: friend.username))
+                                    isPresented.toggle()
                                 }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 32)
+                    }
+                } else if selectedTab == 1 {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 12) {
+                            ForEach(profileViewModel.pendingFriends) { friend in
+                                PendingFriendRow(
+                                    friend: friend,
+                                    onTap: {
+                                        router.push(.profile(id: friend.id, username: friend.username))
+                                        isPresented.toggle()
+                                    },
+                                    onAccept: {
+                                        Task {
+                                            await profileViewModel.acceptFreiendRequest(userID: auth.userID ?? 0, friendID: friend.id, auth: auth)
+                                        }
+                                    },
+                                    onDecline: {
+                                        Task {
+                                            await profileViewModel.declineFriendRequest(userID: auth.userID ?? 0, friendID: friend.id, auth: auth)
+                                        }
+                                    }
+                                )
                                 .padding(14)
                                 .background(Color("CardSurface"))
                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 32)
                     }
+                } else {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color("MutedText"))
+                        TextField("Search by username", text: $findSearchText)
+                            .foregroundStyle(.white)
+                            .tint(Color("PrimaryButton"))
+                            .autocapitalization(.none)
+                            .onChange(of: findSearchText) {
+                                Task {
+                                    await profileViewModel.searchUsers(query: findSearchText)
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color("CardSurface"))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 16)
+
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 12) {
+                            ForEach(profileViewModel.userSearchResults.filter { user in
+                                user.id != (auth.userID ?? 0) &&
+                                !profileViewModel.userFriends.contains(where: { $0.id == user.id })
+                            }) { user in
+                                FindUserRow(
+                                    user: user,
+                                    requestSent: profileViewModel.sentFriendRequestIDs.contains(user.id)
+                                ) {
+                                    Task {
+                                        await profileViewModel.sendFriendRequest(userID: auth.userID ?? 0, friendID: user.id, auth: auth)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 32)
+                    }
                 }
             }
         }
         .onAppear {
             Task {
-                await profileViewModel.getUserFriends(userID: 1)
+                async let friends: () = profileViewModel.getUserFriends(userID: userID)
+                async let sentRequests: () = profileViewModel.loadSentFriendRequests(auth: auth)
+                await friends
+                await sentRequests
+            }
+        }
+    }
+}
+
+// MARK: - Tag Friend Row
+
+private struct TagFriendRow: View {
+    let friend: UserPublicModel
+    let onTap: () -> Void
+    @State private var profileImageURL: String? = nil
+    private let userService = UserService()
+    private let imageService = ImageService()
+
+    var body: some View {
+        Button {
+            onTap()
+        } label: {
+            HStack(spacing: 14) {
+                Group {
+                    if let url = profileImageURL {
+                        AsyncImage(url: URL(string: url)) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                    } else {
+                        Image(systemName: "person.circle.fill")
+                            .resizable()
+                            .foregroundStyle(Color("MutedText"))
+                    }
+                }
+                .frame(width: 46, height: 46)
+                .clipShape(Circle())
+                Text(friend.username)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color("MutedText"))
+            }
+            .padding(14)
+            .background(Color("CardSurface"))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .onAppear {
+            Task {
+                if let blobName = (try? await userService.getUser(userID: friend.id))?.profile_image_url {
+                    profileImageURL = try? await imageService.getImageURL(blobName: blobName)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Find User Row
+
+private struct FindUserRow: View {
+    let user: UserPublicModel
+    let requestSent: Bool
+    let onAdd: () -> Void
+    @State private var profileImageURL: String? = nil
+    private let userService = UserService()
+    private let imageService = ImageService()
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Group {
+                if let url = profileImageURL {
+                    AsyncImage(url: URL(string: url)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .resizable()
+                        .foregroundStyle(Color("MutedText"))
+                }
+            }
+            .frame(width: 46, height: 46)
+            .clipShape(Circle())
+            Text(user.username)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+            Spacer()
+            Button {
+                onAdd()
+            } label: {
+                Text(requestSent ? "Sent" : "Add")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(requestSent ? Color("MutedText") : .white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(requestSent ? Color("CardSurface") : Color("PrimaryButton"))
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(requestSent)
+        }
+        .padding(14)
+        .background(Color("CardSurface"))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onAppear {
+            Task {
+                if let blobName = (try? await userService.getUser(userID: user.id))?.profile_image_url {
+                    profileImageURL = try? await imageService.getImageURL(blobName: blobName)
+                }
             }
         }
     }
@@ -478,7 +692,7 @@ struct TagFriendsProfile: View {
         token_type: "bearer",
         user: RegisterResponse(username: "previewUser", id: 2)
     ))
-    return ProfileView(userID: 2)
+    return ProfileView(userID: 2, username: "previeUser")
         .environmentObject(auth)
         .environmentObject(AppRouter())
 }

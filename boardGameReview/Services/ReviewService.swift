@@ -51,7 +51,7 @@ struct ReviewService {
         guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
         
         let reviews = try JSONDecoder().decode([ReviewModel].self, from: data)
-        
+        print(reviews)
         return reviews
 
     }
@@ -85,5 +85,39 @@ struct ReviewService {
         let review = try JSONDecoder().decode(ReviewModel.self, from: data)
         print(review.rating)
         return review
+    }
+    
+    func deleteReview(reviewID: Int, accessToken: String) async throws {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/reviews/\(reviewID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        try client.authorizedRequest(&request, accessToken: accessToken)
+
+        request.httpMethod = "DELETE"
+
+        let (_, response) = try await client.getSession().data(for: request)
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+    }
+
+    func updateReview(reviewID: Int, update: ReviewUpdate, accessToken: String) async throws {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/reviews/editReview/\(reviewID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        try client.authorizedRequest(&request, accessToken: accessToken)
+
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(update)
+
+        let (_, response) = try await client.getSession().data(for: request)
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
     }
 }

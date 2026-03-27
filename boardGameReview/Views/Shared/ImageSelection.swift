@@ -30,6 +30,8 @@ struct ImageSelection: View {
                     AddImageView()
                 }
                 .buttonStyle(.plain)
+                .foregroundStyle(Color.black)
+                .tint(.blue)
                 .onChange(of: imageViewModel.selectedItems) { oldValue, newValue in
                     Task {
                         await imageViewModel.DetectPhotoChanges(old: oldValue, new: newValue)
@@ -77,7 +79,8 @@ struct AddImageView: View {
                 .frame(width: 170, height: 150)
                 .clipped()
                 .cornerRadius(12)
-                .opacity(0.1)
+                .foregroundStyle(Color.white)
+                .opacity(0.4)
             Button {
                 //add image
             } label: {

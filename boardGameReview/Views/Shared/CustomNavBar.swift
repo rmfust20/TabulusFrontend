@@ -18,7 +18,7 @@ struct CustomNavBar: ViewModifier {
                     Button(action: { router.pop() }) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 20, weight: .bold)) // Control size here
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                     }
                 }
             }

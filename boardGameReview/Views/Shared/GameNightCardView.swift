@@ -11,20 +11,39 @@ struct GameNightCardView: View {
     let gameNight: GameNightModel
     let imageService: ImageService = ImageService()
     let boardGames: [(Int, String)]
+    var onDelete: (() -> Void)? = nil
+    @EnvironmentObject private var auth: Auth
+    @EnvironmentObject private var router: AppRouter
     @State private var gameNightImages: [String] = []
+    @State private var profileImageURL: String? = nil
+    @State private var hostUsername: String = ""
+    @State private var showOptions: Bool = false
+    @State private var showDeleteConfirm: Bool = false
+    private let userService = UserService()
+    private let gameNightService = GameNightService()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
             // Header
             HStack(spacing: 12) {
-                Image("userProfile")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 42, height: 42)
-                    .clipShape(Circle())
+                Group {
+                    if let url = profileImageURL {
+                        AsyncImage(url: URL(string: url)) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                    } else {
+                        Image(systemName: "person.circle.fill")
+                            .resizable()
+                            .foregroundStyle(Color("MutedText"))
+                    }
+                }
+                .frame(width: 42, height: 42)
+                .clipShape(Circle())
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Robert Fusting")
+                    Text(hostUsername)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                     Text(formattedDate(gameNight.game_night_date))
@@ -32,9 +51,35 @@ struct GameNightCardView: View {
                         .foregroundStyle(Color("MutedText"))
                 }
                 Spacer()
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(Color("MutedText"))
-                    .padding(.trailing, 4)
+                Button {
+                    showOptions = true
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(Color("MutedText"))
+                        .padding(.trailing, 4)
+                }
+                .buttonStyle(.plain)
+                .confirmationDialog("", isPresented: $showOptions) {
+                    if gameNight.host_user_id == auth.userID {
+                        Button("Delete Post", role: .destructive) {
+                            showDeleteConfirm = true
+                        }
+                    } else {
+                        Button("Report", role: .destructive) { }
+                    }
+                    Button("Cancel", role: .cancel) { }
+                }
+                .alert("Delete Post?", isPresented: $showDeleteConfirm) {
+                    Button("Delete", role: .destructive) {
+                        Task {
+                            try? await gameNightService.deleteGameNight(gameNightID: gameNight.id, accessToken: auth.accessToken ?? "")
+                            onDelete?()
+                        }
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("This will permanently delete this game night post.")
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -85,16 +130,20 @@ struct GameNightCardView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(boardGames, id: \.0) { item in
-                            AsyncImage(url: URL(string: item.1)) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.12))
-                                    .overlay(ProgressView())
+                            Button {
+                                router.push(.boardGameDetail(id: item.0))
+                            } label: {
+                                AsyncImage(url: URL(string: item.1)) { image in
+                                    image.resizable().scaledToFill()
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.12))
+                                        .overlay(ProgressView())
+                                }
+                                .frame(width: 56, height: 56)
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                             }
-                            .frame(width: 56, height: 56)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         }
                     }
                     .padding(.horizontal, 14)
@@ -112,60 +161,6 @@ struct GameNightCardView: View {
                 .onAppear {
                     print(boardGames)
                 }
-
-            // Liked by row
-            HStack(spacing: 0) {
-                Image("userProfile").resizable().scaledToFill()
-                    .frame(width: 22, height: 22).clipShape(Circle())
-                Image("userProfile").resizable().scaledToFill()
-                    .frame(width: 22, height: 22).clipShape(Circle())
-                    .offset(x: -6)
-                Image("userProfile").resizable().scaledToFill()
-                    .frame(width: 22, height: 22).clipShape(Circle())
-                    .offset(x: -12)
-                Text("liked this")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color("MutedText"))
-                    .padding(.leading, -4)
-                Spacer()
-                Text("5 Comments")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color("MutedText"))
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-
-            Rectangle()
-                .fill(.white.opacity(0.08))
-                .frame(maxWidth: .infinity, maxHeight: 1)
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-
-            // Action bar
-            HStack {
-                Button {
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "hand.thumbsup")
-                        Text("Like")
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    .foregroundStyle(Color("MutedText"))
-                }
-                .buttonStyle(.plain)
-                Spacer()
-                Button {} label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "text.bubble")
-                        Text("Comment")
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    .foregroundStyle(Color("MutedText"))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
         }
         .background(Color("CardSurface"))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -176,6 +171,12 @@ struct GameNightCardView: View {
                     let trueImages = try? await imageService.getImageURLs(blobNames: images)
                     if let trueImages = trueImages {
                         gameNightImages = trueImages
+                    }
+                }
+                if let user = try? await userService.getUser(userID: gameNight.host_user_id) {
+                    hostUsername = user.username ?? "Loading"
+                    if let blobName = user.profile_image_url {
+                        profileImageURL = try? await imageService.getImageURL(blobName: blobName)
                     }
                 }
             }

@@ -9,9 +9,10 @@ import SwiftUI
 
 enum AppRoute: Hashable {
     case boardGame(id: Int)
-    case addReview(id: Int, rating : Int?)
+    case addReview(id: Int, rating: Int?, review: ReviewModel?)
+    case boardGameDetail(id: Int)
     case addGameNight(id: Int)
-    case profile(id: Int)
+    case profile(id: Int, username: String)
     case gameNightFeed(userOnly: Bool)
     case gameNight(id: Int)
 }
@@ -41,10 +42,12 @@ struct AppNavRouter<Root: View>: View {
             BoardGameView(boardGameID: id)
         case .addGameNight(let id):
             AddGameNightView(userID: id)
-        case .addReview(let id, let rating):
-            AddReviewView(boardGameID: id, rating: rating ?? 0)
-        case .profile(let id):
-            ProfileView(userID: id)
+        case .addReview(let id, let rating, let review):
+            AddReviewView(boardGameID: id, rating: rating ?? 0, review: review)
+        case .boardGameDetail(let id):
+            BoardGameDetailView(boardGameID: id)
+        case .profile(let id, let username):
+            ProfileView(userID: id, username: username)
         case .gameNightFeed(let userOnly):
             GameNightFeedView(userOnly: userOnly)
         case .gameNight(let id):

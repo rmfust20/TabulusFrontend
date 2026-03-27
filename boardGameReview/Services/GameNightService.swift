@@ -131,4 +131,23 @@ struct GameNightService {
         return userGameNights
     }
     
+    func deleteGameNight(gameNightID: Int, accessToken: String) async throws {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/gameNight/\(gameNightID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        try client.authorizedRequest(&request, accessToken: accessToken)
+
+        request.httpMethod = "DELETE"
+
+        let (_, response) = try await client.getSession().data(for: request)
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+    }
+    
+    
+    
+    
 }

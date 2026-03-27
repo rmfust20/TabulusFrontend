@@ -18,6 +18,7 @@ class BoardGameViewModel: ObservableObject {
     @Published var numberOfRatings: Int? = nil
     @Published var numberOfReviews: Int? = nil
     @Published var userRating : Int = 0
+    @Published var userReview : ReviewModel? = nil
     private let reviewService: ReviewService
     
     init(boardGameService: BoardGameService = BoardGameService(), reviewService: ReviewService = ReviewService(), boardGameID: Int) {
@@ -95,6 +96,15 @@ class BoardGameViewModel: ObservableObject {
     func getUserReview(userID: Int) async {
         if let review = try? await reviewService.getUserReview(boardGameID: boardGameID, userID: userID) {
             userRating = review.rating
+            userReview = review
         }
+    }
+    
+    func updateReview(reviewID: Int, review: ReviewUpdate, accessToken: String) async throws {
+        try await reviewService.updateReview(reviewID: reviewID, update: review, accessToken: accessToken)
+    }
+    
+    func deleteReview(reviewID: Int, accessToken: String) async throws {
+        try await reviewService.deleteReview(reviewID: reviewID, accessToken: accessToken)
     }
 }

@@ -6,6 +6,8 @@ struct RateThisGameFullView: View {
     @EnvironmentObject private var auth : Auth
     let id : Int
     @Binding var rating: Int
+    let review: ReviewModel?
+    let onNavigateToReview: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -14,29 +16,35 @@ struct RateThisGameFullView: View {
             FlexStarsView(rating:$rating, size: 24, interactive: true)
         }
         .padding()
-        .onDisappear{
-            if rating > 0 {
-                Task {
-                    let reviewModel = ReviewModel(
-                        id: nil,
-                        board_game_id: id,
-                        user_id: auth.userID ?? 0,
-                        username: auth.username ?? "unknown",
-                        rating: rating,
-                        comment: nil
-                    )
-                    do {
-                        try await reviewViewModel.postReview(reviewModel, accessToken: auth.accessToken ?? "")
+        .onDisappear {
+            Task {
+                do {
+                    if let existing = review {
+                        if rating == 0 && existing.comment == nil {
+                            // No rating and no comment — delete the review
+                            try await reviewViewModel.deleteReview(
+                                reviewID: existing.id!,
+                                accessToken: auth.accessToken ?? ""
+                            )
+                        } else if rating > 0 && rating != existing.rating {
+                            // Rating changed — update it
+                            try await reviewViewModel.updateReview(
+                                reviewID: existing.id!,
+                                review: ReviewUpdate(id: existing.id!, rating: rating),
+                                accessToken: auth.accessToken ?? ""
+                            )
+                        }
                     }
-                    catch {
-                        print("Error posting review: \(error)")
-                    }
+                } catch {
+                    print("Error saving review: \(error)")
                 }
             }
         }
-        
-        if rating > 0 {
-            ReviewButton(id: id, rating: rating)
+
+        if rating > 0 && review != nil {
+            ReviewButton(id: id, rating: rating, review: review, text: "Edit your review", onNavigate: onNavigateToReview)
+        } else if rating > 0 && review == nil {
+            ReviewButton(id: id, rating: rating, review: nil, text: "Write a review", onNavigate: onNavigateToReview)
         }
            
     }
@@ -64,7 +72,4 @@ struct Stars : View {
     }
 }
 
-#Preview {
-    RateThisGameFullView(id: 1, rating: .constant(2))
-}
 

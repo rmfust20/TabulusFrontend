@@ -137,11 +137,12 @@ struct AddGameNightView: View {
                         await gameNightViewModel.uploadGameNight(
                             auth: auth, images: imageUploadViewModel.uploaded
                         )
+                        router.pop()
                     }
                 } label: {
                     Text("Save")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color("PrimaryButton"))
+                        .foregroundStyle(Color.white)
                 }
             }
         }
@@ -292,6 +293,7 @@ struct TagFriends: View {
     @Binding var isPresented: Bool
     @State var searchText: String = ""
     @State var taggedFriends: [String] = []
+    @EnvironmentObject private var auth: Auth
 
     var body: some View {
         ZStack {
@@ -353,7 +355,7 @@ struct TagFriends: View {
         }
         .onAppear {
             Task {
-                await gameNightViewModel.getUserFriends(userID: 1)
+                await gameNightViewModel.getUserFriends(userID: auth.userID ?? 0)
             }
         }
     }
@@ -368,14 +370,34 @@ struct TaggedFriendListView: View {
     @State var friendID: Int
     @State var isSelected: Bool
     let onSelect: () -> Void
+    @State private var profileImageURL: String? = nil
+    private let userService = UserService()
+    private let imageService = ImageService()
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 44, height: 44)
-                .foregroundStyle(Color("MutedText"))
+            Group {
+                if let url = profileImageURL {
+                    AsyncImage(url: URL(string: url)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .resizable()
+                        .foregroundStyle(Color("MutedText"))
+                }
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(Circle())
+            .onAppear {
+                Task {
+                    if let blobName = (try? await userService.getUser(userID: friendID))?.profile_image_url {
+                        profileImageURL = try? await imageService.getImageURL(blobName: blobName)
+                    }
+                }
+            }
 
             Text(friendName)
                 .font(.system(size: 15))

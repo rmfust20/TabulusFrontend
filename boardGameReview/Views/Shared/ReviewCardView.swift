@@ -2,15 +2,34 @@ import SwiftUI
 
 struct ReviewCardView: View {
     let reviewModel: ReviewModel
-    @State var text: String? = nil
+    @State private var profileImageURL: String? = nil
+    private let userService = UserService()
+    private let imageService = ImageService()
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image("userProfile")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 44, height: 44)
-                .clipShape(Circle())
+            Group {
+                if let url = profileImageURL {
+                    AsyncImage(url: URL(string: url)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .resizable()
+                        .foregroundStyle(Color("MutedText"))
+                }
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(Circle())
+            .onAppear {
+                Task {
+                    if let blobName = (try? await userService.getUser(userID: reviewModel.user_id))?.profile_image_url {
+                        profileImageURL = try? await imageService.getImageURL(blobName: blobName)
+                    }
+                }
+            }
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {

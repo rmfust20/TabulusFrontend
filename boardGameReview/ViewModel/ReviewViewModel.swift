@@ -20,4 +20,12 @@ class ReviewViewModel : ObservableObject {
     func postReview(_ review: ReviewModel, accessToken: String) async throws {
         try await reviewService.postReview(review: review, accessToken: accessToken)
     }
+    
+    func updateReview(reviewID: Int, review: ReviewUpdate, accessToken: String) async throws {
+        try await reviewService.updateReview(reviewID: reviewID, update: review, accessToken: accessToken)
+    }
+
+    func deleteReview(reviewID: Int, accessToken: String) async throws {
+        try await reviewService.deleteReview(reviewID: reviewID, accessToken: accessToken)
+    }
 }

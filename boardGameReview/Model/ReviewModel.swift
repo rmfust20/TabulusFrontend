@@ -7,7 +7,13 @@
 
 import Foundation
 
-struct ReviewModel: Identifiable, Codable {
+struct ReviewUpdate: Codable {
+    let id: Int
+    var rating: Int?
+    var comment: String?
+}
+
+struct ReviewModel: Identifiable, Codable, Hashable {
     let id: Int?
     let board_game_id: Int
     let user_id: Int
