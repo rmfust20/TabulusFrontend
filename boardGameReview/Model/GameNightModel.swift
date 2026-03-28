@@ -18,7 +18,7 @@ struct GameNightUploadModel: Codable {
 struct GameNightSessionUploadModel: Codable {
     let board_game_id: Int
     let duration_minutes: Int?
-    let winner_user_ids: [Int?]
+    let winner_user_ids: [Int]
 }
 
 struct GameNightSessionModel: Codable {

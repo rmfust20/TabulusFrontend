@@ -37,7 +37,7 @@ struct BottomNavBarView: View {
             AppNavRouter(selectedTab: $selectedTab) { ProfileView(userID: auth.userID ?? 0, username: auth.username) }
                     .tabItem { Label("Profile", systemImage: "person") }
                     .tag(Tab.profile)
-            AppNavRouter(selectedTab: $selectedTab) { RegisterView(userID: 0) }
+            AppNavRouter(selectedTab: $selectedTab) { RegisterView() }
                 .tabItem { Label("Login", systemImage: "square.and.arrow.up") }
                 .tag(Tab.login)
             
@@ -46,7 +46,7 @@ struct BottomNavBarView: View {
                 .tag(Tab.game)
                 
         }
-        .tint(.white)
+        .tint(.black)
     }
 }
 

@@ -51,6 +51,12 @@ struct BoardGameView: View {
                                 )
                         }
                         LinearGradient(
+                            colors: [Color("CharcoalBackground").opacity(0.6), .clear],
+                            startPoint: .top,
+                            endPoint: .init(x: 0.5, y: 0.25)
+                        )
+                        .frame(width: UIScreen.main.bounds.width, height: 360)
+                        LinearGradient(
                             colors: [.clear, Color("CharcoalBackground")],
                             startPoint: .center,
                             endPoint: .bottom
@@ -65,6 +71,7 @@ struct BoardGameView: View {
                             cardImage = boardGameViewModel.boardGameImage
                             await boardGameViewModel.getReviews()
                             await boardGameViewModel.getUserReview(userID: auth.userID ?? 0)
+                            await boardGameViewModel.getWinRateForGame(userID: auth.userID ?? 0)
                         }
                     }
 
@@ -126,7 +133,26 @@ struct BoardGameView: View {
                         }
                     }
 
-                   
+                    // Your win rate
+                    if let wr = boardGameViewModel.userWinRate, wr.total_sessions > 0 {
+                        HStack(spacing: 8) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color("PrimaryButton"))
+                            Text("Your Win Rate:")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color("MutedText"))
+                            Text("\(Int(wr.win_rate * 100))%")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text("(\(wr.wins)/\(wr.total_sessions) sessions)")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color("MutedText"))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                    }
 
                     // Description
                     if let description = boardGame?.description, !description.isEmpty {

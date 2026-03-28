@@ -13,12 +13,15 @@ struct CustomNavBar: ViewModifier {
     func body(content: Content) -> some View {
         content
             .navigationBarBackButtonHidden(true)
+            .toolbarBackground(Color("CharcoalBackground"), for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { router.pop() }) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .bold)) // Control size here
-                            .foregroundColor(.white)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 34, height: 34)
+                            .background(.ultraThinMaterial, in: Circle())
                     }
                 }
             }

@@ -69,6 +69,19 @@ class GameNightViewModel: ObservableObject {
         print(selectedFriends)
     }
     
+    func resolveToggleUser(_ user: UserPublicModel, winnerCaller: Int?) {
+        if let winnerCaller = winnerCaller {
+            if selectedWinners[winnerCaller]?.contains(user.id) ?? false {
+                selectedWinners[winnerCaller]?.removeAll { $0 == user.id }
+            } else {
+                selectedWinners[winnerCaller, default: []].append(user.id)
+                if !selectedFriends.contains(where: { $0.id == user.id }) {
+                    selectedFriends.append(user)
+                }
+            }
+        }
+    }
+
     func resolveToggle(_ friendID: Int, winnerCaller: Int?) {
         //if its a winnerCaller -> we add to selectedWinners and selectedFriends
         // we also remove from winnerCaller at that key
@@ -136,7 +149,12 @@ class GameNightViewModel: ObservableObject {
             sessions: getGameNightSessions(),
             users: selectedFriends.compactMap {$0.id})
         
-        try? await gameNightService.postGameNight(gameNight: gameNightUploadModel, accessToken: auth.accessToken ?? "")
+        do {
+            try await gameNightService.postGameNight(gameNight: gameNightUploadModel, accessToken: auth.accessToken ?? "")
+        } catch {
+            print("uploadGameNight failed:", error)
+        }
+
             
     }
 }

@@ -253,4 +253,85 @@ struct UserService {
         guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
     }
 
+    func getWinRate(userID: Int) async throws -> WinRateResponse {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/users/winRate/\(userID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+
+        let (data, response) = try await client.getSession().data(for: request)
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+
+        return try JSONDecoder().decode(WinRateResponse.self, from: data)
+    }
+
+    func refresh(refreshToken: String) async throws -> RefreshTokenResponse {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/users/refresh"
+        components?.queryItems = [URLQueryItem(name: "refresh_token", value: refreshToken)]
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let (data, response) = try await client.getSession().data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+
+        return try JSONDecoder().decode(RefreshTokenResponse.self, from: data)
+    }
+
+    func appleSignIn(identityToken: String) async throws -> AppleAuthResponse {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/users/auth/apple"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["identity_token": identityToken])
+
+        let (data, response) = try await client.getSession().data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+
+        return try JSONDecoder().decode(AppleAuthResponse.self, from: data)
+    }
+
+    func appleCompleteRegistration(appleID: String, username: String, email: String?) async throws -> AuthResponse {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/users/auth/apple/complete"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body = AppleCompleteRequest(apple_id: appleID, username: username, email: email)
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await client.getSession().data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+
+        return try JSONDecoder().decode(AuthResponse.self, from: data)
+    }
+
+    func getWinRateForGame(userID: Int, boardGameID: Int) async throws -> WinRateResponse {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/users/winRate/\(userID)/\(boardGameID)"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+
+        let (data, response) = try await client.getSession().data(for: request)
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+
+        return try JSONDecoder().decode(WinRateResponse.self, from: data)
+    }
+
 }

@@ -22,12 +22,44 @@ struct GameNightFeedView: View {
                             .font(.system(size: 30, weight: .bold))
                             .foregroundStyle(.white)
                         Spacer()
+                        Button {
+                            router.push(.addGameNight(id: 1))
+                        } label: {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 32))
+                            .foregroundStyle(.white)
+                            .padding(.vertical, 16)
+
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     .padding(.bottom, 20)
 
                     LazyVStack(spacing: 16) {
+                        if gameNightFeedViewModel.gameNights.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "person.2.slash")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(.gray)
+                                Text("Add friends to see their game nights")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(.gray)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
+                            .onAppear {
+                                Task {
+                                    if userOnly == true {
+                                        await gameNightFeedViewModel.fetchUserGameNights(userID: auth.userID ?? 1)
+                                    } else {
+                                        await gameNightFeedViewModel.fetchGameNights(userID: auth.userID ?? 1)
+                                    }
+                                }
+                            }
+                        }
                         ForEach(gameNightFeedViewModel.gameNights) { gameNight in
                             GameNightCardView(
                                 gameNight: gameNight,
@@ -36,23 +68,6 @@ struct GameNightFeedView: View {
                                     .map { ($0.key, $0.value) }
                             )
                         }
-
-                        Button {
-                            router.push(.addGameNight(id: 1))
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 16))
-                                Text("Post a Game Night")
-                                    .font(.system(size: 15, weight: .semibold))
-                            }
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color("PrimaryButton"))
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
                         .onAppear {
                             Task {
                                 if userOnly == true {

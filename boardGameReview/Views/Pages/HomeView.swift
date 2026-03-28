@@ -12,6 +12,8 @@ struct HomeView: View {
     @EnvironmentObject private var auth: Auth
     @StateObject var homeFeedViewModel = HomeFeedViewModel()
     @ObservedObject var reviewViewModel = ReviewViewModel()
+    @State private var isSearchPresented: Bool = false
+    @State private var selectedBoardGameID: Int? = nil
 
     var body: some View {
         ZStack {
@@ -20,13 +22,18 @@ struct HomeView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     // Header
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Trending Games")
-                                .font(.system(size: 30, weight: .bold))
+                    HStack(alignment: .center) {
+                        Text("Trending Games")
+                            .font(.system(size: 30, weight: .bold))
+                            .foregroundStyle(Color.white)
+                        Spacer()
+                        Button {
+                            isSearchPresented = true
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(Color.white)
                         }
-                        Spacer()
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -50,6 +57,15 @@ struct HomeView: View {
                         accessToken: auth.accessToken ?? ""
                     )
                 }
+            }
+            .fullScreenCover(isPresented: $isSearchPresented) {
+                SearchView(isPresented: $isSearchPresented, selectedBoardGameID: $selectedBoardGameID)
+                    .onChange(of: selectedBoardGameID) {
+                        if let id = selectedBoardGameID {
+                            isSearchPresented = false
+                            router.push(.boardGame(id: id))
+                        }
+                    }
             }
 
         }

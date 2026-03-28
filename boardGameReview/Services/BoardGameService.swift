@@ -96,7 +96,10 @@ struct BoardGameService {
     
     func fetchBoardGames(name: String) async throws -> [BoardGameModel] {
         var components = URLComponents(string: baseURL)
-        components?.path = "/boardGames/search/\(name)"
+        var pathAllowed = CharacterSet.urlPathAllowed
+        pathAllowed.remove("/")
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: pathAllowed) ?? name
+        components?.path = "/boardGames/search/\(encodedName)"
         guard let url = components?.url else { throw APIError.invalidURL }
 
         let request = URLRequest(url: url)

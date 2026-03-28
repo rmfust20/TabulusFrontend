@@ -178,9 +178,11 @@ struct ProfileView: View {
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(.white)
                             Spacer()
-                            Text("Avg Win Rate: 70%")
-                                .font(.system(size: 13))
-                                .foregroundStyle(Color("MutedText"))
+                            if let winRate = profileViewModel.winRate {
+                                Text("Avg Win Rate: \(Int(winRate * 100))%")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color("MutedText"))
+                            }
                         }
                         .padding(.horizontal, 20)
 
@@ -215,9 +217,11 @@ struct ProfileView: View {
                                 async let boardGames: () = profileViewModel.fetchUserBoardGames(userID: userID)
                                 async let gameNights: () = profileViewModel.fetchUserGameNights(userID: userID)
                                 async let userProfile: () = profileViewModel.fetchUserProfile(auth: auth)
+                                async let winRate: () = profileViewModel.fetchWinRate(userID: userID)
                                 await userProfile
                                 await boardGames
                                 await gameNights
+                                await winRate
                                 await withTaskGroup(of: Void.self) { group in
                                     for gameNight in profileViewModel.gameNights {
                                         let id = gameNight.id

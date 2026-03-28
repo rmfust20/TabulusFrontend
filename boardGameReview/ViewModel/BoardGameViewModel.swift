@@ -19,11 +19,14 @@ class BoardGameViewModel: ObservableObject {
     @Published var numberOfReviews: Int? = nil
     @Published var userRating : Int = 0
     @Published var userReview : ReviewModel? = nil
+    @Published var userWinRate: WinRateResponse? = nil
     private let reviewService: ReviewService
-    
-    init(boardGameService: BoardGameService = BoardGameService(), reviewService: ReviewService = ReviewService(), boardGameID: Int) {
+    private let userService: UserService
+
+    init(boardGameService: BoardGameService = BoardGameService(), reviewService: ReviewService = ReviewService(), userService: UserService = UserService(), boardGameID: Int) {
         self.boardGameService = boardGameService
         self.reviewService = reviewService
+        self.userService = userService
         self.boardGameID = boardGameID
         print(boardGameID)
     }
@@ -106,5 +109,10 @@ class BoardGameViewModel: ObservableObject {
     
     func deleteReview(reviewID: Int, accessToken: String) async throws {
         try await reviewService.deleteReview(reviewID: reviewID, accessToken: accessToken)
+    }
+
+    @MainActor
+    func getWinRateForGame(userID: Int) async {
+        userWinRate = try? await userService.getWinRateForGame(userID: userID, boardGameID: boardGameID)
     }
 }

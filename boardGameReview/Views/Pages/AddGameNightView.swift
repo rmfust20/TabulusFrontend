@@ -7,6 +7,7 @@ struct AddGameNightView: View {
     @State var selectedBoardGameID: Int? = nil
     @StateObject private var gameNightViewModel = GameNightViewModel()
     @State private var placeholderText: String = "What happened?"
+    @State private var isUploading: Bool = false
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var auth: Auth
     @StateObject private var imageUploadViewModel = ImageUploadViewModel()
@@ -128,15 +129,32 @@ struct AddGameNightView: View {
             .fullScreenCover(isPresented: $addFriendsPresented) {
                 TagFriends(winnerCaller: nil, gameNightViewModel: gameNightViewModel, isPresented: $addFriendsPresented)
             }
+
+            if isUploading {
+                Color.black.opacity(0.55).ignoresSafeArea()
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .scaleEffect(1.4)
+                        .tint(.white)
+                    Text("Uploading...")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white)
+                }
+                .padding(32)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     Task {
+                        isUploading = true
                         await imageUploadViewModel.uploadSelected(auth: auth)
                         await gameNightViewModel.uploadGameNight(
                             auth: auth, images: imageUploadViewModel.uploaded
                         )
+                        isUploading = false
                         router.pop()
                     }
                 } label: {
@@ -144,6 +162,7 @@ struct AddGameNightView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.white)
                 }
+                .disabled(isUploading)
             }
         }
     }
@@ -293,6 +312,8 @@ struct TagFriends: View {
     @Binding var isPresented: Bool
     @State var searchText: String = ""
     @State var taggedFriends: [String] = []
+    @State private var currentUser: UserPublicModel? = nil
+    private let userService = UserService()
     @EnvironmentObject private var auth: Auth
 
     var body: some View {
@@ -334,6 +355,21 @@ struct TagFriends: View {
 
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 0) {
+                        if winnerCaller != nil, let me = currentUser {
+                            TaggedFriendListView(
+                                winnerCaller: winnerCaller,
+                                friendName: "You",
+                                friendID: me.id,
+                                isSelected: gameNightViewModel.handleIsSelected(friendID: me.id, winnerCaller: winnerCaller),
+                                onSelect: {
+                                    gameNightViewModel.resolveToggleUser(me, winnerCaller: winnerCaller)
+                                }
+                            )
+                            Rectangle()
+                                .fill(.white.opacity(0.06))
+                                .frame(maxWidth: .infinity, maxHeight: 1)
+                                .padding(.horizontal, 16)
+                        }
                         ForEach(gameNightViewModel.filteredFriends) { friend in
                             TaggedFriendListView(
                                 winnerCaller: winnerCaller,
@@ -356,6 +392,9 @@ struct TagFriends: View {
         .onAppear {
             Task {
                 await gameNightViewModel.getUserFriends(userID: auth.userID ?? 0)
+                if let user = try? await userService.getUser(userID: auth.userID ?? 0) {
+                    currentUser = UserPublicModel(id: user.id, username: user.username ?? "")
+                }
             }
         }
     }

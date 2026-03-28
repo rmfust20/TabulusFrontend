@@ -28,6 +28,7 @@ class ProfileViewModel: ObservableObject {
     @Published var pendingFriends: [UserPublicModel] = []
     @Published var userSearchResults: [UserPublicModel] = []
     @Published var sentFriendRequestIDs: Set<Int> = []
+    @Published var winRate: Double? = nil
 
     init(boardGameService: BoardGameService = BoardGameService(), gameNightService: GameNightService = GameNightService(), imageService: ImageService = ImageService(), userService: UserService = UserService()) {
         self.boardGameService = boardGameService
@@ -189,6 +190,12 @@ class ProfileViewModel: ObservableObject {
     func loadSentFriendRequests(auth: Auth) async {
         let sent = try? await userService.getSentFriendRequests(userID: auth.userID ?? 0, accessToken: auth.accessToken ?? "")
         sentFriendRequestIDs = Set((sent ?? []).map { $0.id })
+    }
+
+    @MainActor
+    func fetchWinRate(userID: Int) async {
+        let result = try? await userService.getWinRate(userID: userID)
+        winRate = result?.win_rate
     }
 
     @MainActor

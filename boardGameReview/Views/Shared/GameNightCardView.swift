@@ -17,6 +17,7 @@ struct GameNightCardView: View {
     @State private var gameNightImages: [String] = []
     @State private var profileImageURL: String? = nil
     @State private var hostUsername: String = ""
+    @State private var playerProfileImages: [Int: String?] = [:]
     @State private var showOptions: Bool = false
     @State private var showDeleteConfirm: Bool = false
     private let userService = UserService()
@@ -118,6 +119,60 @@ struct GameNightCardView: View {
                 }
             }
 
+            // Players
+            let winnerIDs = Set(gameNight.sessions.flatMap { $0.winners_user_id }.compactMap { $0 })
+            let players = gameNight.users
+            if !players.isEmpty {
+                Text("PLAYERS")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color("MutedText"))
+                    .tracking(1.5)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(players, id: \.id) { player in
+                            let isWinner = winnerIDs.contains(player.id)
+                            ZStack(alignment: .bottom) {
+                                Group {
+                                    if let entry = playerProfileImages[player.id], let url = entry {
+                                        AsyncImage(url: URL(string: url)) { image in
+                                            image.resizable().scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                    } else {
+                                        Image(systemName: "person.circle.fill")
+                                            .resizable()
+                                            .foregroundStyle(Color("MutedText"))
+                                    }
+                                }
+                                .frame(width: 44, height: 44)
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle().stroke(isWinner ? Color.yellow : Color.clear, lineWidth: 2.5)
+                                )
+
+                                if isWinner {
+                                    Text("Winner")
+                                        .font(.system(size: 7, weight: .bold))
+                                        .foregroundStyle(.black)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 2)
+                                        .background(Color.yellow)
+                                        .clipShape(Capsule())
+                                        .offset(y: 8)
+                                }
+                            }
+                            .padding(.bottom, isWinner ? 8 : 0)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 6)
+                }
+            }
+
             // Board games played
             if !boardGames.isEmpty {
                 Text("PLAYED")
@@ -131,7 +186,7 @@ struct GameNightCardView: View {
                     HStack(spacing: 8) {
                         ForEach(boardGames, id: \.0) { item in
                             Button {
-                                router.push(.boardGameDetail(id: item.0))
+                                router.push(.boardGame(id: item.0))
                             } label: {
                                 AsyncImage(url: URL(string: item.1)) { image in
                                     image.resizable().scaledToFill()
@@ -140,7 +195,7 @@ struct GameNightCardView: View {
                                         .fill(Color.gray.opacity(0.12))
                                         .overlay(ProgressView())
                                 }
-                                .frame(width: 56, height: 56)
+                                .frame(width: gameNightImages.isEmpty ? 90 : 56, height: gameNightImages.isEmpty ? 90 : 56)
                                 .clipped()
                                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                             }
@@ -158,9 +213,7 @@ struct GameNightCardView: View {
                 .multilineTextAlignment(.leading)
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
-                .onAppear {
-                    print(boardGames)
-                }
+                .padding(.bottom, 14)
         }
         .background(Color("CardSurface"))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -177,6 +230,24 @@ struct GameNightCardView: View {
                     hostUsername = user.username ?? "Loading"
                     if let blobName = user.profile_image_url {
                         profileImageURL = try? await imageService.getImageURL(blobName: blobName)
+                    }
+                }
+                let winnerIDs = Array(Set(gameNight.sessions.flatMap { $0.winners_user_id }.compactMap { $0 }))
+                let playerIDs = gameNight.users.map { $0.id }
+                let allIDs = Array(Set(playerIDs + winnerIDs))
+                await withTaskGroup(of: (Int, String?).self) { group in
+                    for userID in allIDs {
+                        group.addTask {
+                            if let user = try? await userService.getUser(userID: userID),
+                               let blobName = user.profile_image_url {
+                                let url = try? await imageService.getImageURL(blobName: blobName)
+                                return (userID, url)
+                            }
+                            return (userID, nil)
+                        }
+                    }
+                    for await (userID, url) in group {
+                        playerProfileImages[userID] = url
                     }
                 }
             }
