@@ -20,6 +20,8 @@ struct BoardGameView: View {
     @State private var isNavigatingToAddReview = false
     @State private var isDescriptionExpanded = false
     @State private var isLoading = false
+    @State private var reviewOptionsTarget: ReviewPublicModel?
+    @State private var reviewActiveAlert: ReviewCardAlert?
     @StateObject private var boardGameViewModel: BoardGameViewModel
     @StateObject private var reviewViewModel = ReviewViewModel()
 
@@ -52,6 +54,17 @@ struct BoardGameView: View {
                 ProgressView().tint(.white)
             }
         }
+        .reviewCardActions(
+            optionsTarget: $reviewOptionsTarget,
+            activeAlert: $reviewActiveAlert,
+            accessToken: auth.accessToken ?? "",
+            onReported: {
+                feedRefresh.friendsChanged += 1
+            },
+            onBlocked: {
+                feedRefresh.friendsChanged += 1
+            }
+        )
         .edgesIgnoringSafeArea(.top)
         .onDisappear(perform: handleDisappear)
         .onChange(of: router.reviewPosted) {
@@ -312,16 +325,8 @@ struct BoardGameView: View {
                 onTapUser: { userID, username in
                     router.push(.profile(id: userID, username: username))
                 },
-                onReport: { reviewID in
-                    Task {
-                        try? await reviewViewModel.reportReview(reviewID: reviewID, accessToken: auth.accessToken ?? "")
-                    }
-                },
-                onBlock: { userID in
-                    Task {
-                        try? await UserService().blockUser(userID: userID, accessToken: auth.accessToken ?? "")
-                        feedRefresh.friendsChanged += 1
-                    }
+                onEllipsisTap: { review in
+                    reviewOptionsTarget = review
                 },
                 onReachEnd: {
                     Task {
@@ -360,8 +365,7 @@ private struct ReviewsList: View {
     let profileImages: [Int: String]
     let isLoading: Bool
     let onTapUser: (Int, String) -> Void
-    let onReport: (Int) -> Void
-    let onBlock: (Int) -> Void
+    let onEllipsisTap: (ReviewPublicModel) -> Void
     let onReachEnd: () -> Void
 
     private var feedReviews: [ReviewPublicModel] {
@@ -372,18 +376,16 @@ private struct ReviewsList: View {
     var body: some View {
         Group {
             if let pinned = pinnedReview {
-                Button {
+                ReviewCardView(
+                    reviewModel: pinned,
+                    profileImageURL: profileImages[pinned.user.id],
+                    onEllipsisTap: { onEllipsisTap(pinned) }
+                )
+                .padding(.horizontal, 20)
+                .contentShape(Rectangle())
+                .onTapGesture {
                     onTapUser(pinned.user.id, pinned.user.username ?? "")
-                } label: {
-                    ReviewCardView(
-                        reviewModel: pinned,
-                        profileImageURL: profileImages[pinned.user.id],
-                        onReport: { onReport(pinned.id) },
-                        onBlock: { onBlock(pinned.user.id) }
-                    )
-                    .padding(.horizontal, 20)
                 }
-                .buttonStyle(.plain)
 
                 Rectangle()
                     .fill(.white.opacity(0.06))
@@ -391,18 +393,16 @@ private struct ReviewsList: View {
             }
 
             ForEach(feedReviews) { review in
-                Button {
+                ReviewCardView(
+                    reviewModel: review,
+                    profileImageURL: profileImages[review.user.id],
+                    onEllipsisTap: { onEllipsisTap(review) }
+                )
+                .padding(.horizontal, 20)
+                .contentShape(Rectangle())
+                .onTapGesture {
                     onTapUser(review.user.id, review.user.username ?? "")
-                } label: {
-                    ReviewCardView(
-                        reviewModel: review,
-                        profileImageURL: profileImages[review.user.id],
-                        onReport: { onReport(review.id) },
-                        onBlock: { onBlock(review.user.id) }
-                    )
-                    .padding(.horizontal, 20)
                 }
-                .buttonStyle(.plain)
 
                 Rectangle()
                     .fill(.white.opacity(0.06))

@@ -12,6 +12,8 @@ struct GameNightFeedView: View {
     @EnvironmentObject private var auth: Auth
     @EnvironmentObject private var feedRefresh: FeedRefreshCoordinator
     @StateObject private var gameNightFeedViewModel = GameNightFeedViewModel()
+    @State private var optionsTarget: GameNightFeedModel?
+    @State private var activeAlert: GameNightCardAlert?
     let userOnly: Int?
     var body: some View {
         ZStack {
@@ -42,9 +44,9 @@ struct GameNightFeedView: View {
                             .padding(.vertical, 60)
                         }
                         ForEach(gameNightFeedViewModel.gameNightPresent) { gameNight in
-                            GameNightCardView(gameNight: gameNight, onDelete: {
-                                gameNightFeedViewModel.removeGameNight(id: gameNight.id)
-                            })
+                            GameNightCardView(gameNight: gameNight) {
+                                optionsTarget = gameNight
+                            }
                         }
                         
 
@@ -68,6 +70,21 @@ struct GameNightFeedView: View {
                     .padding(.bottom, 32)
                 }
             }
+        .gameNightCardActions(
+            optionsTarget: $optionsTarget,
+            activeAlert: $activeAlert,
+            viewerUserID: auth.userID,
+            accessToken: auth.accessToken ?? "",
+            onDeleted: { id in
+                gameNightFeedViewModel.removeGameNight(id: id)
+            },
+            onBlocked: {
+                feedRefresh.friendsChanged += 1
+            },
+            onReported: {
+                feedRefresh.friendsChanged += 1
+            }
+        )
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

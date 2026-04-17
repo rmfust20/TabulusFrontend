@@ -10,8 +10,12 @@ import SwiftUI
 struct GameNightDetailView: View {
     let gameNightID: Int
     @EnvironmentObject private var auth: Auth
+    @EnvironmentObject private var feedRefresh: FeedRefreshCoordinator
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = GameNightDetailViewModel()
     @State private var isLoading = true
+    @State private var optionsTarget: GameNightFeedModel?
+    @State private var activeAlert: GameNightCardAlert?
 
     var body: some View {
         ZStack {
@@ -30,13 +34,31 @@ struct GameNightDetailView: View {
                     .padding(.bottom, 20)
 
                     if let feedModel = viewModel.feedModel {
-                        GameNightCardView(gameNight: feedModel)
-                            .padding(.horizontal, 16)
+                        GameNightCardView(gameNight: feedModel) {
+                            optionsTarget = feedModel
+                        }
+                        .padding(.horizontal, 16)
                     }
                 }
                 .padding(.bottom, 32)
             }
         }
+        .gameNightCardActions(
+            optionsTarget: $optionsTarget,
+            activeAlert: $activeAlert,
+            viewerUserID: auth.userID,
+            accessToken: auth.accessToken ?? "",
+            onDeleted: { _ in
+                dismiss()
+            },
+            onBlocked: {
+                feedRefresh.friendsChanged += 1
+                dismiss()
+            },
+            onReported: {
+                feedRefresh.friendsChanged += 1
+            }
+        )
         .overlay {
             if isLoading {
                 Color("CharcoalBackground").ignoresSafeArea()

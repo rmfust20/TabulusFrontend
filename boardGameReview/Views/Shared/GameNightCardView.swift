@@ -9,22 +9,13 @@ import SwiftUI
 
 struct GameNightCardView: View {
     let gameNight: GameNightFeedModel
-    var onDelete: (() -> Void)? = nil
-    @EnvironmentObject private var auth: Auth
+    let onEllipsisTap: () -> Void
     @EnvironmentObject private var router: AppRouter
-    @EnvironmentObject private var feedRefresh: FeedRefreshCoordinator
-    @State private var showOptions: Bool = false
-    @State private var showDeleteConfirm: Bool = false
-    @State private var showDeleteError: Bool = false
-    @State private var showReportConfirm: Bool = false
-    @State private var showBlockConfirm: Bool = false
     @State private var isDescriptionExpanded = false
     @State private var isDescriptionTruncated = false
     @State private var fullDescriptionHeight: CGFloat? = nil
     @State private var clampedDescriptionHeight: CGFloat? = nil
     private let descriptionCollapsedLineLimit = 3
-    private let gameNightService = GameNightService()
-    private let userService = UserService()
 
     private var nonHostPlayers: [PlayerFeedModel] {
         gameNight.players.filter { $0.id != gameNight.hostUserID }
@@ -98,69 +89,14 @@ struct GameNightCardView: View {
                 }
                 Spacer()
                 Button {
-                    showOptions = true
+                    onEllipsisTap()
                 } label: {
                     Image(systemName: "ellipsis")
                         .foregroundStyle(Color("MutedText"))
-                        .padding(.trailing, 4)
+                        .frame(width: 44, height: 44, alignment: .trailing)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .confirmationDialog("", isPresented: $showOptions) {
-                    if gameNight.hostUserID == auth.userID {
-                        Button("Delete Post", role: .destructive) {
-                            showDeleteConfirm = true
-                        }
-                    } else {
-                        Button("Report", role: .destructive) {
-                            showReportConfirm = true
-                        }
-                        Button("Block", role: .destructive) {
-                            showBlockConfirm = true
-                        }
-                    }
-                    Button("Cancel", role: .cancel) { }
-                }
-                .alert("Report this post?", isPresented: $showReportConfirm) {
-                    Button("Report", role: .destructive) {
-                        Task {
-                            try? await gameNightService.reportGameNight(gameNightID: gameNight.id, accessToken: auth.accessToken ?? "")
-                        }
-                    }
-                    Button("Cancel", role: .cancel) { }
-                } message: {
-                    Text("This post will be reported for review.")
-                }
-                .alert("Block \(gameNight.hostUsername)?", isPresented: $showBlockConfirm) {
-                    Button("Block", role: .destructive) {
-                        Task {
-                            try? await userService.blockUser(userID: gameNight.hostUserID, accessToken: auth.accessToken ?? "")
-                            feedRefresh.friendsChanged += 1
-                        }
-                    }
-                    Button("Cancel", role: .cancel) { }
-                } message: {
-                    Text("You won't see their reviews or game nights anymore.")
-                }
-                .alert("Delete Post?", isPresented: $showDeleteConfirm) {
-                    Button("Delete", role: .destructive) {
-                        Task {
-                            do {
-                                try await gameNightService.deleteGameNight(gameNightID: gameNight.id, accessToken: auth.accessToken ?? "")
-                                onDelete?()
-                            } catch {
-                                showDeleteError = true
-                            }
-                        }
-                    }
-                    Button("Cancel", role: .cancel) { }
-                } message: {
-                    Text("This will permanently delete this game night post.")
-                }
-                .alert("Delete Failed", isPresented: $showDeleteError) {
-                    Button("OK", role: .cancel) {}
-                } message: {
-                    Text("Failed to delete this post. Please try again.")
-                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -372,6 +308,156 @@ struct GameNightCardView: View {
     }
 }
 
+enum GameNightCardAlert {
+    case report(GameNightFeedModel)
+    case block(GameNightFeedModel)
+    case deleteConfirm(GameNightFeedModel)
+    case deleteError
+    case reportSuccess
+    case blockSuccess(String)
+}
+
+struct GameNightCardActionsModifier: ViewModifier {
+    @Binding var optionsTarget: GameNightFeedModel?
+    @Binding var activeAlert: GameNightCardAlert?
+    let viewerUserID: Int?
+    let accessToken: String
+    let onDeleted: (Int) -> Void
+    let onBlocked: () -> Void
+    let onReported: () -> Void
+
+    private let gameNightService = GameNightService()
+    private let userService = UserService()
+
+    func body(content: Content) -> some View {
+        content
+            .confirmationDialog(
+                "",
+                isPresented: Binding(
+                    get: { optionsTarget != nil },
+                    set: { if !$0 { optionsTarget = nil } }
+                ),
+                presenting: optionsTarget
+            ) { target in
+                if target.hostUserID == viewerUserID {
+                    Button("Delete Post", role: .destructive) {
+                        activeAlert = .deleteConfirm(target)
+                    }
+                } else {
+                    Button("Report", role: .destructive) {
+                        activeAlert = .report(target)
+                    }
+                    Button("Block", role: .destructive) {
+                        activeAlert = .block(target)
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            }
+            .alert(
+                alertTitle,
+                isPresented: Binding(
+                    get: { activeAlert != nil },
+                    set: { if !$0 { activeAlert = nil } }
+                ),
+                presenting: activeAlert
+            ) { alert in
+                alertActions(for: alert)
+            } message: { alert in
+                alertMessage(for: alert)
+            }
+    }
+
+    private var alertTitle: String {
+        switch activeAlert {
+        case .report: return "Report this post?"
+        case .block(let night): return "Block \(night.hostUsername)?"
+        case .deleteConfirm: return "Delete Post?"
+        case .deleteError: return "Delete Failed"
+        case .reportSuccess: return "Reported"
+        case .blockSuccess(let name): return "Blocked \(name)"
+        case .none: return ""
+        }
+    }
+
+    @ViewBuilder
+    private func alertActions(for alert: GameNightCardAlert) -> some View {
+        switch alert {
+        case .report(let night):
+            Button("Report", role: .destructive) {
+                Task {
+                    try? await gameNightService.reportGameNight(gameNightID: night.id, accessToken: accessToken)
+                    onReported()
+                    activeAlert = .reportSuccess
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        case .block(let night):
+            Button("Block", role: .destructive) {
+                Task {
+                    try? await userService.blockUser(userID: night.hostUserID, accessToken: accessToken)
+                    onBlocked()
+                    activeAlert = .blockSuccess(night.hostUsername)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        case .deleteConfirm(let night):
+            Button("Delete", role: .destructive) {
+                Task {
+                    do {
+                        try await gameNightService.deleteGameNight(gameNightID: night.id, accessToken: accessToken)
+                        onDeleted(night.id)
+                    } catch {
+                        activeAlert = .deleteError
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        case .deleteError, .reportSuccess, .blockSuccess:
+            Button("OK", role: .cancel) { }
+        }
+    }
+
+    @ViewBuilder
+    private func alertMessage(for alert: GameNightCardAlert) -> some View {
+        switch alert {
+        case .report:
+            Text("This post will be reported for review.")
+        case .block:
+            Text("You won't see their reviews or game nights anymore.")
+        case .deleteConfirm:
+            Text("This will permanently delete this game night post.")
+        case .deleteError:
+            Text("Failed to delete this post. Please try again.")
+        case .reportSuccess:
+            Text("Thanks for reporting. We'll review this post.")
+        case .blockSuccess:
+            Text("You won't see their reviews or game nights anymore.")
+        }
+    }
+}
+
+extension View {
+    func gameNightCardActions(
+        optionsTarget: Binding<GameNightFeedModel?>,
+        activeAlert: Binding<GameNightCardAlert?>,
+        viewerUserID: Int?,
+        accessToken: String,
+        onDeleted: @escaping (Int) -> Void,
+        onBlocked: @escaping () -> Void,
+        onReported: @escaping () -> Void
+    ) -> some View {
+        modifier(GameNightCardActionsModifier(
+            optionsTarget: optionsTarget,
+            activeAlert: activeAlert,
+            viewerUserID: viewerUserID,
+            accessToken: accessToken,
+            onDeleted: onDeleted,
+            onBlocked: onBlocked,
+            onReported: onReported
+        ))
+    }
+}
+
 private struct GameNightDescFullHeightKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
@@ -418,9 +504,9 @@ private struct GameNightDescClampedHeightKey: PreferenceKey {
                     winners_user_id: [1]
                 )
             ]
-        )
+        ),
+        onEllipsisTap: {}
     )
-    .environmentObject(Auth())
     .environmentObject(AppRouter())
     .padding()
     .background(Color("CharcoalBackground"))
