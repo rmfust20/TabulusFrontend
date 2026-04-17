@@ -19,7 +19,7 @@ struct ReviewCardView: View {
         HStack(alignment: .top, spacing: 12) {
             Group {
                 if let url = profileImageURL {
-                    RetryAsyncImage(url: URL(string: url)) { image in
+                    RetryAsyncImage(url: URL(string: url), context: .profiles) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         ProgressView()

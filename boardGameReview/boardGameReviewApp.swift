@@ -15,6 +15,10 @@ struct boardGameReviewApp: App {
     @StateObject var feedRefresh = FeedRefreshCoordinator()
     @State private var isRestoringSession = true
 
+    init() {
+        AppImageCaches.registerAll()
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {

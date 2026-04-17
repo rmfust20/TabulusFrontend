@@ -19,6 +19,12 @@ enum RegisterResult {
     case failed
 }
 
+enum ForgotPasswordResult {
+    case success
+    case notVerified
+    case failed
+}
+
 class UserViewModel: ObservableObject {
     var userService = UserService()
     
@@ -26,21 +32,16 @@ class UserViewModel: ObservableObject {
         let user = UserModel(id: nil, username: username, email: email, password: password, profile_image_url: nil)
         do {
             _ = try await userService.registerUser(user: user)
+            return .success
         } catch APIError.httpStatus(let code) where code == 400 || code == 409 {
             return .duplicate
         } catch {
             return .failed
         }
-
-        guard let accessResponse = try? await userService.login(username: username, password: password) else {
-            return .failed
-        }
-        await populateAuth(auth: accessResponse, authStore: authStore)
-        return .success
     }
     
-    func login(username: String, password: String, authStore: Auth) async {
-        let accessResponse = try? await userService.login(username: username, password: password)
+    func login(identifier: String, password: String, authStore: Auth) async {
+        let accessResponse = try? await userService.login(identifier: identifier, password: password)
         if let accessResponse = accessResponse {
             await populateAuth(auth: accessResponse, authStore: authStore)
         }
@@ -82,8 +83,19 @@ class UserViewModel: ObservableObject {
         return true
     }
 
-    func forgotPassword(email: String) async -> Bool {
-        (try? await userService.forgotPassword(email: email)) != nil
+    func forgotPassword(email: String) async -> ForgotPasswordResult {
+        do {
+            try await userService.forgotPassword(email: email)
+            return .success
+        } catch APIError.httpStatus(403) {
+            return .notVerified
+        } catch {
+            return .failed
+        }
+    }
+
+    func resendVerification(email: String) async -> Bool {
+        (try? await userService.resendVerification(email: email)) != nil
     }
 
     func resetPassword(token: String, newPassword: String) async -> Bool {

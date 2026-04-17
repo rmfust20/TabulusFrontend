@@ -12,11 +12,15 @@ struct RegisterView: View {
     @EnvironmentObject var auth: Auth
     @EnvironmentObject var userViewModel: UserViewModel
 
-    private enum AuthMode { case signUp, logIn, forgotPassword, resetPassword }
+    private enum AuthMode { case signUp, logIn, forgotPassword, resetPassword, verifyEmail }
     private enum SignUpStep { case credentials, username }
 
     @State private var mode: AuthMode = .signUp
     @State private var signUpStep: SignUpStep = .credentials
+    @State private var pendingVerificationEmail: String = ""
+    @State private var verificationInfoMessage: String? = nil
+    @State private var verifiedBannerVisible: Bool = false
+    @State private var forgotNotVerified: Bool = false
 
     // Sign Up
     @State private var email: String = ""
@@ -70,7 +74,7 @@ struct RegisterView: View {
                     .padding(.top, 60)
 
                     // MARK: Mode Picker
-                    if mode == .forgotPassword || mode == .resetPassword {
+                    if mode == .forgotPassword || mode == .resetPassword || mode == .verifyEmail {
                         EmptyView()
                     } else {
                     HStack(spacing: 0) {
@@ -124,6 +128,8 @@ struct RegisterView: View {
                         logInForm
                     } else if mode == .forgotPassword {
                         forgotPasswordForm
+                    } else if mode == .verifyEmail {
+                        verifyEmailForm
                     } else {
                         resetPasswordForm
                     }
@@ -133,16 +139,22 @@ struct RegisterView: View {
             }
         }
         .onOpenURL { url in
-            guard url.scheme == "tabulus",
-                  url.host == "resetPassword",
-                  let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                  let token = components.queryItems?.first(where: { $0.name == "token" })?.value
-            else { return }
-            resetToken = token
-            newPassword = ""
-            confirmPassword = ""
-            errorMessage = nil
-            withAnimation(.easeInOut(duration: 0.2)) { mode = .resetPassword }
+            guard url.scheme?.lowercased() == "tabulus" else { return }
+            let host = url.host?.lowercased()
+            if host == "resetpassword" {
+                guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                      let token = components.queryItems?.first(where: { $0.name == "token" })?.value
+                else { return }
+                resetToken = token
+                newPassword = ""
+                confirmPassword = ""
+                errorMessage = nil
+                withAnimation(.easeInOut(duration: 0.2)) { mode = .resetPassword }
+            } else if host == "emailverified" {
+                errorMessage = nil
+                verifiedBannerVisible = true
+                withAnimation(.easeInOut(duration: 0.2)) { mode = .logIn }
+            }
         }
     }
 
@@ -316,15 +328,27 @@ struct RegisterView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            if verifiedBannerVisible {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13))
+                    Text("Email verified — you can now log in")
+                        .font(.system(size: 13))
+                }
+                .foregroundStyle(Color.green.opacity(0.85))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             VStack(spacing: 12) {
-                // Username field
+                // Email or username field
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Username")
+                    Text("Email or username")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color("MutedText"))
                     TextField("", text: $loginUsername)
                         .textInputAutocapitalization(.never)
                         .textContentType(.username)
+                        .keyboardType(.emailAddress)
                         .foregroundStyle(.white)
                         .tint(Color("PrimaryButton"))
                         .padding(.horizontal, 16)
@@ -424,6 +448,39 @@ struct RegisterView: View {
                 }
                 .foregroundStyle(Color.green.opacity(0.85))
                 .frame(maxWidth: .infinity, alignment: .leading)
+            } else if forgotNotVerified {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 13))
+                        Text("Please verify your email before resetting your password.")
+                            .font(.system(size: 13))
+                    }
+                    .foregroundStyle(Color.red.opacity(0.85))
+
+                    Button {
+                        Task {
+                            let trimmed = forgotEmail.trimmingCharacters(in: .whitespaces)
+                            pendingVerificationEmail = trimmed
+                            verificationInfoMessage = nil
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                mode = .verifyEmail
+                                forgotNotVerified = false
+                            }
+                            await resendVerification(email: trimmed)
+                        }
+                    } label: {
+                        Text("Resend verification email")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color("PrimaryButton"))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Email")
@@ -470,6 +527,77 @@ struct RegisterView: View {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     mode = .logIn
                     errorMessage = nil
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .medium))
+                    Text("Back to log in")
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .foregroundStyle(Color("MutedText"))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    // MARK: - Verify Email Form
+
+    private var verifyEmailForm: some View {
+        VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Check your email")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("We sent a verification link to")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color("MutedText"))
+                Text(pendingVerificationEmail)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text("Tap the link in the email to verify your account, then come back to log in.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color("MutedText"))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let info = verificationInfoMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13))
+                    Text(info)
+                        .font(.system(size: 13))
+                }
+                .foregroundStyle(Color.green.opacity(0.85))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            errorBanner
+
+            Button {
+                Task { await resendVerification(email: pendingVerificationEmail) }
+            } label: {
+                ZStack {
+                    Text("Resend verification email")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .opacity(isLoading ? 0 : 1)
+                    if isLoading { ProgressView().tint(.white) }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color("PrimaryButton"))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(isLoading)
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    mode = .logIn
+                    errorMessage = nil
+                    verificationInfoMessage = nil
                 }
             } label: {
                 HStack(spacing: 4) {
@@ -638,6 +766,7 @@ struct RegisterView: View {
 
     private func sendForgotPassword() async {
         errorMessage = nil
+        forgotNotVerified = false
         let trimmed = forgotEmail.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty, trimmed.contains("@"), trimmed.contains(".") else {
             errorMessage = "Please enter a valid email address."
@@ -645,9 +774,14 @@ struct RegisterView: View {
         }
         isLoading = true
         defer { isLoading = false }
-        _ = await userViewModel.forgotPassword(email: trimmed)
-        // Always show success — backend never reveals if email exists
-        withAnimation(.easeInOut(duration: 0.2)) { forgotPasswordSent = true }
+        let result = await userViewModel.forgotPassword(email: trimmed)
+        switch result {
+        case .notVerified:
+            forgotNotVerified = true
+        default:
+            // Always show success — backend never reveals if email exists
+            withAnimation(.easeInOut(duration: 0.2)) { forgotPasswordSent = true }
+        }
     }
 
     private func submitResetPassword() async {
@@ -685,9 +819,9 @@ struct RegisterView: View {
         }
         isLoading = true
         defer { isLoading = false }
-        await userViewModel.login(username: loginUsername, password: loginPassword, authStore: auth)
+        await userViewModel.login(identifier: loginUsername, password: loginPassword, authStore: auth)
         if auth.accessToken == nil {
-            errorMessage = "Invalid username or password."
+            errorMessage = "Invalid email/username or password."
         }
     }
 
@@ -718,6 +852,10 @@ struct RegisterView: View {
             errorMessage = "Please enter a username."
             return
         }
+        guard !trimmedUsername.contains("@") else {
+            errorMessage = "Usernames can't contain the @ symbol."
+            return
+        }
         isLoading = true
         defer { isLoading = false }
 
@@ -737,13 +875,29 @@ struct RegisterView: View {
             let result = await userViewModel.register(username: trimmedUsername, email: email, password: password, authStore: auth)
             switch result {
             case .success:
-                break
+                pendingVerificationEmail = email
+                verificationInfoMessage = nil
+                withAnimation(.easeInOut(duration: 0.2)) { mode = .verifyEmail }
             case .duplicate:
                 errorMessage = "That username or email is already in use. Please try another."
             case .failed:
                 errorMessage = "Registration failed. Please check your connection and try again."
             }
         }
+    }
+
+    private func resendVerification(email: String) async {
+        errorMessage = nil
+        verificationInfoMessage = nil
+        let trimmed = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            errorMessage = "No email on file for resend."
+            return
+        }
+        isLoading = true
+        defer { isLoading = false }
+        _ = await userViewModel.resendVerification(email: trimmed)
+        verificationInfoMessage = "Verification email sent. Check your inbox."
     }
 }
 

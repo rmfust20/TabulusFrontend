@@ -40,18 +40,18 @@ struct UserService {
         return try JSONDecoder().decode(RegisterResponse.self, from: responseData)
     }
     
-    func login(username: String, password: String) async throws -> AuthResponse {
+    func login(identifier: String, password: String) async throws -> AuthResponse {
         var components = URLComponents(string: baseURL)
         components?.path = "/users/login"
         guard let url = components?.url else { throw APIError.invalidURL }
-        
+
         var request = URLRequest(url: url)
-        
+
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let encoder = JSONEncoder()
-        let loginData = ["username": username, "password": password]
+        let loginData = ["username": identifier, "password": password]
         let data = try encoder.encode(loginData)
         request.httpBody = data
         
@@ -336,6 +336,21 @@ struct UserService {
     func forgotPassword(email: String) async throws {
         var components = URLComponents(string: baseURL)
         components?.path = "/users/forgotPassword"
+        guard let url = components?.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["email": email])
+
+        let (_, response) = try await client.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.httpStatus(http.statusCode) }
+    }
+
+    func resendVerification(email: String) async throws {
+        var components = URLComponents(string: baseURL)
+        components?.path = "/users/resendVerification"
         guard let url = components?.url else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)

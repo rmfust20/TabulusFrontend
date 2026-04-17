@@ -54,7 +54,7 @@ struct GameNightCardView: View {
                     } label: {
                         Group {
                             if let url = gameNight.hostProfileImageURL {
-                                RetryAsyncImage(url: URL(string: url)) { image in
+                                RetryAsyncImage(url: URL(string: url), context: .profiles) { image in
                                     image.resizable().scaledToFill()
                                 } placeholder: {
                                     ProgressView()
@@ -170,7 +170,7 @@ struct GameNightCardView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(gameNight.photos, id: \.self) { urlString in
-                            RetryAsyncImage(url: URL(string: urlString)) { image in
+                            RetryAsyncImage(url: URL(string: urlString), context: .gameNights) { image in
                                 image.resizable().scaledToFill()
                             } placeholder: {
                                 Rectangle()
@@ -204,7 +204,7 @@ struct GameNightCardView: View {
                             Button {
                                 router.push(.boardGame(id: item.id))
                             } label: {
-                                RetryAsyncImage(url: URL(string: item.imageURL)) { image in
+                                RetryAsyncImage(url: URL(string: item.imageURL), context: .default) { image in
                                     image.resizable().scaledToFill()
                                 } placeholder: {
                                     Rectangle()
@@ -241,7 +241,7 @@ struct GameNightCardView: View {
                                 ZStack(alignment: .bottom) {
                                     Group {
                                         if let url = player.profileImageURL {
-                                            RetryAsyncImage(url: URL(string: url)) { image in
+                                            RetryAsyncImage(url: URL(string: url), context: .profiles) { image in
                                                 image.resizable().scaledToFill()
                                             } placeholder: {
                                                 ProgressView()

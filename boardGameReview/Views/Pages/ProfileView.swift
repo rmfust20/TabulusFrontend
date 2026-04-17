@@ -211,7 +211,7 @@ struct ProfileView: View {
                                         Button {
                                             router.push(.boardGame(id: boardGame.id))
                                         } label: {
-                                            RetryAsyncImage(url: URL(string: boardGame.image ?? "")) { image in
+                                            RetryAsyncImage(url: URL(string: boardGame.image ?? ""), context: .default) { image in
                                                 image.resizable().scaledToFill()
                                             } placeholder: {
                                                 Rectangle()
@@ -298,7 +298,7 @@ struct ProfileView: View {
     private var profileAvatar: some View {
         ZStack {
             if let profileImageURL = profileViewModel.profileImageURL {
-                RetryAsyncImage(url: URL(string: profileImageURL)) { image in
+                RetryAsyncImage(url: URL(string: profileImageURL), context: .profiles) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     ProgressView()
@@ -391,7 +391,7 @@ struct ProfileView: View {
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 if let imageURL = profileViewModel.imageURLs[gameNight.id] {
-                    RetryAsyncImage(url: URL(string: imageURL)) { image in
+                    RetryAsyncImage(url: URL(string: imageURL), context: .gameNights) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         ProgressView()
@@ -452,7 +452,7 @@ private struct PendingFriendRow: View {
                 HStack(spacing: 14) {
                     Group {
                         if let url = profileImageURL {
-                            RetryAsyncImage(url: URL(string: url)) { image in
+                            RetryAsyncImage(url: URL(string: url), context: .profiles) { image in
                                 image.resizable().scaledToFill()
                             } placeholder: {
                                 ProgressView()
@@ -751,7 +751,7 @@ private struct TagFriendRow: View {
                 HStack(spacing: 14) {
                     Group {
                         if let url = profileImageURL {
-                            RetryAsyncImage(url: URL(string: url)) { image in
+                            RetryAsyncImage(url: URL(string: url), context: .profiles) { image in
                                 image.resizable().scaledToFill()
                             } placeholder: {
                                 ProgressView()
@@ -844,7 +844,7 @@ private struct FindUserRow: View {
                 HStack(spacing: 14) {
                     Group {
                         if let url = profileImageURL {
-                            RetryAsyncImage(url: URL(string: url)) { image in
+                            RetryAsyncImage(url: URL(string: url), context: .profiles) { image in
                                 image.resizable().scaledToFill()
                             } placeholder: {
                                 ProgressView()

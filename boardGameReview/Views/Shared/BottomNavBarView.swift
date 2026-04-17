@@ -30,29 +30,32 @@ struct BottomNavBarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Button {
-                showBGGRedirect = true
-            } label: {
-                Image("bggIcon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.top, -30)
-                    .padding(.bottom, -30)
-            }
-            .background(Color(red: 0.11, green: 0.11, blue: 0.12))
-            .alert("Leave App?", isPresented: $showBGGRedirect) {
-                Button("Go to BoardGameGeek") {
-                    if let url = URL(string: "https://boardgamegeek.com") {
-                        UIApplication.shared.open(url)
-                    }
+            HStack {
+                Button {
+                    showBGGRedirect = true
+                } label: {
+                    Image("bggIcon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
+                        .padding(.horizontal, 20)
+                        .padding(.top, -30)
+                        .padding(.bottom, -30)
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("You will be redirected to boardgamegeek.com")
+                .background(Color("CharcoalBackground"))
+                .alert("Leave App?", isPresented: $showBGGRedirect) {
+                    Button("Go to BoardGameGeek") {
+                        if let url = URL(string: "https://boardgamegeek.com") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("You will be redirected to boardgamegeek.com")
+                }
+                Spacer()
             }
+            .background(Color("CharcoalBackground"))
 
             TabView(selection: $selectedTab) {
 
