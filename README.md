@@ -1,6 +1,6 @@
 <div align="center">
   <h2>Welcome to Tabulus - an iOS app where users can explore new board games, leave reviews, and share game nights with friends.</h2>
-  <img src="DemoAssets/HomeScreen.png" alt="Landing Screen" width="25%"/>
+  <img src="TabGif.gif" alt="Landing Screen" width="25%"/>
 </div>
 
 <div align="center">
