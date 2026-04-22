@@ -1,0 +1,17 @@
+<div align="center">
+  <h2>Welcome to Tabulus - an iOS app where users can explore new board games, leave reviews, and share game nights with friends.</h2>
+  <img src="DemoAssets/HomeScreen.png" alt="Landing Screen" width="25%"/>
+</div>
+
+<div align="center">
+<img src="Explore.png" alt="Find new board games" width="25%"/>
+
+<div align="center">
+<img src="Review.png" alt="Review" width=25%"/>
+
+<div align="center">
+<img src="Share.png" alt="Share" width=25%"/>
+
+
+
+
